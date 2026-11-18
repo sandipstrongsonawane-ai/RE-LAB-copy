@@ -57,7 +57,7 @@ class MarketSourceCatalogTest {
         assertEquals(4, netSources.size)
         assertTrue(netSources.all { !it.enabled && it.sourceId == "livesattamatka" })
         assertEquals(
-            setOf(Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.PUNA_BAZAR),
+            setOf(Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.valueOf("PUNA_BAZAR")),
             netSources.map { it.market }.toSet()
         )
     }
