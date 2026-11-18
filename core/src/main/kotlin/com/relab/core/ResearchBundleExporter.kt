@@ -24,20 +24,17 @@ object ResearchBundleExporter {
             "historical-coverage-audit.csv" to CoverageCsvExporter.export(coverageReports),
             "source-publication-timing.csv" to SourceTimingAnalytics.exportCsv(observations),
             "prediction-learning-ledger.csv" to PredictionLedgerCsvCodec.export(predictionLedger),
-            "research-manifest.json" to ResearchManifestExporter.export(
-                observations, consensusRecords, analyses, generatedAt
-            ),
-            "README.txt" to readme(observations, consensusRecords, analyses, coverageReports, generatedAt)
+            "research-manifest.json" to ResearchManifestExporter.export(observations, consensusRecords, analyses, generatedAt),
+            "README.txt" to readme(observations, consensusRecords, analyses, coverageReports, generatedAt, predictionLedger)
         )
         val index = buildString {
             appendLine("{")
-            appendLine("  \"bundle_format_version\": 1,")
+            appendLine("  \"bundle_format_version\": 2,")
             appendLine("  \"generated_at\": ${json(generatedAt.toString())},")
             appendLine("  \"artifacts\": [")
-            appendLine(artifacts.entries.mapIndexed { index, (name, content) ->
+            appendLine(artifacts.entries.map { (name, content) ->
                 val bytes = content.toByteArray(StandardCharsets.UTF_8)
-                val checksum = sha256(bytes)
-                "    {\"file\":${json(name)},\"utf8_bytes\":${bytes.size},\"sha256\":${json(checksum)}}"
+                "    {\"file\":${json(name)},\"utf8_bytes\":${bytes.size},\"sha256\":${json(sha256(bytes))}}"
             }.joinToString(",\n"))
             appendLine("  ]")
             appendLine("}")
@@ -58,21 +55,25 @@ object ResearchBundleExporter {
         records: List<ChartRecord>,
         analyses: List<MarketAnalysis>,
         coverage: List<CoverageReport>,
-        generatedAt: Instant
+        generatedAt: Instant,
+        predictionLedger: PredictionLearningLedger
     ): String = buildString {
         appendLine("RE-LAB research bundle")
         appendLine("Generated at: $generatedAt")
         appendLine("Source observations: ${observations.size}")
         appendLine("Multi-source consensus chart records: ${records.size}")
         appendLine("Market/session analyses: ${analyses.size}")
-        appendLine("Coverage reports: ${coverage.size}")\n        appendLine("Locked predictions: ${predictionLedger.lockedPredictions.size}")\n        appendLine("Verification attempts: ${predictionLedger.verifications.size}")
+        appendLine("Coverage reports: ${coverage.size}")
+        appendLine("Locked predictions: ${predictionLedger.lockedPredictions.size}")
+        appendLine("Verification attempts: ${predictionLedger.verifications.size}")
         appendLine()
         appendLine("Files:")
         appendLine("- source-observations.csv: full raw source ledger and provenance")
         appendLine("- derived-consensus-research.csv: validated multi-source consensus records only")
         appendLine("- walk-forward-audit.csv: chronological out-of-sample baseline audit")
         appendLine("- historical-coverage-audit.csv: expected-day coverage states")
-        appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")\n        appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")
+        appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")
+        appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")
         appendLine("- research-manifest.json: dataset checksum, reconciliation and timing metadata")
         appendLine("- bundle-index.json: SHA-256 and byte size for every other artifact")
         appendLine()
@@ -82,8 +83,7 @@ object ResearchBundleExporter {
     }
 
     private fun sha256(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes)
-            .joinToString("") { "%02x".format(it) }
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     private fun json(value: String): String = buildString {
         append('"')
