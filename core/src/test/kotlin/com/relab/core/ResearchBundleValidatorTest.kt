@@ -1,6 +1,7 @@
 package com.relab.core
 
 import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 import java.time.Instant
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -60,6 +61,32 @@ class ResearchBundleValidatorTest {
         assertTrue(result.errors.any { it.contains("unsafe ZIP entry") })
     }
 
+    @Test
+    fun rejectsSemanticallyInvalidSourceCsvEvenWhenItsChecksumMatches() {
+        val original = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-17T12:00:00Z")
+        )
+        val entries = unzip(original).toMutableMap()
+        entries["source-observations.csv"] = "not,a,valid,source,csv".toByteArray()
+        val result = ResearchBundleValidator.validate(reindexedZip(entries))
+        assertFalse(result.valid)
+        assertTrue(result.errors.joinToString().contains("Source observations contain invalid rows"))
+    }
+
+    @Test
+    fun rejectsSemanticallyInvalidPredictionLedgerEvenWhenItsChecksumMatches() {
+        val original = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-17T12:00:00Z")
+        )
+        val entries = unzip(original).toMutableMap()
+        entries["prediction-learning-ledger.csv"] = "not,a,valid,ledger".toByteArray()
+        val result = ResearchBundleValidator.validate(reindexedZip(entries))
+        assertFalse(result.valid)
+        assertTrue(result.errors.joinToString().contains("Invalid prediction-learning-ledger.csv"))
+    }
+
     private fun unzip(bytes: ByteArray): Map<String, ByteArray> {
         val entries = linkedMapOf<String, ByteArray>()
         java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
@@ -81,5 +108,21 @@ class ResearchBundleValidatorTest {
             }
         }
         return output.toByteArray()
+    }
+
+    private fun reindexedZip(entries: Map<String, ByteArray>): ByteArray {
+        val index = buildString {
+            appendLine("{")
+            appendLine("  \"bundle_format_version\": 2,")
+            appendLine("  \"artifacts\": [")
+            appendLine(entries.entries.map { (name, bytes) ->
+                val hash = MessageDigest.getInstance("SHA-256").digest(bytes)
+                    .joinToString("") { "%02x".format(it) }
+                "    {\"file\":\"$name\",\"utf8_bytes\":${bytes.size},\"sha256\":\"$hash\"}"
+            }.joinToString(",\\n"))
+            appendLine("  ]")
+            appendLine("}")
+        }
+        return zip(entries + ("bundle-index.json" to index.toByteArray()))
     }
 }
