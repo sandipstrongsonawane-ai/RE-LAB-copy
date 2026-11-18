@@ -553,30 +553,30 @@ private fun RelabHome(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("\${market.name.replace('_', ' ')}  ·  $marketKind", style = MaterialTheme.typography.titleMedium)
-                                Text("Session: \${open.sessionId}  ·  Target: \${open.targetDate}", style = MaterialTheme.typography.labelSmall)
+                                Text("${market.name.replace('_', ' ')}  ·  $marketKind", style = MaterialTheme.typography.titleMedium)
+                                Text("Session: ${open.sessionId}  ·  Target: ${open.targetDate}", style = MaterialTheme.typography.labelSmall)
                                 Text(
-                                    latest?.let { "Latest available result (\${it.date}): \${it.openPanna} - \${it.jodi} - \${it.closePanna}" }
+                                    latest?.let { "Latest available result (${it.date}): ${it.openPanna} - ${it.jodi} - ${it.closePanna}" }
                                         ?: "Latest result: abhi verified / imported row available nahi hai",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 if (open.abstained || close.abstained) {
-                                    Text("NEXT RESEARCH: Abhi candidate nahi — \${open.note}", style = MaterialTheme.typography.bodySmall)
+                                    Text("NEXT RESEARCH: Abhi candidate nahi — ${open.note}", style = MaterialTheme.typography.bodySmall)
                                 } else {
-                                    Text("OPEN PANNA research: \${open.candidates.take(3).joinToString("  ·  ") { "\${it.panna} (index \${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
-                                    Text("CLOSE PANNA research: \${close.candidates.take(3).joinToString("  ·  ") { "\${it.panna} (index \${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
-                                    Text("JODI research: \${jodi.take(5).joinToString("  ·  ") { "\${it.jodi} (index \${"%.1f".format(it.score)})" }.ifBlank { "Not enough paired evidence" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("OPEN PANNA research: ${open.candidates.take(3).joinToString("  ·  ") { "${it.panna} (index ${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("CLOSE PANNA research: ${close.candidates.take(3).joinToString("  ·  ") { "${it.panna} (index ${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("JODI research: ${jodi.take(5).joinToString("  ·  ") { "${it.jodi} (index ${"%.1f".format(it.score)})" }.ifBlank { "Not enough paired evidence" }}", style = MaterialTheme.typography.bodyMedium)
                                 }
                                 Text(
-                                    pattern?.let { "Pattern cross-check: \${it.acceptedRecords} usable rows · Open family \${it.openFamilySequences.take(2).joinToString { p -> "\${p.pattern} (\${p.count})" }.ifBlank { "not enough history" }} · Close family \${it.closeFamilySequences.take(2).joinToString { p -> "\${p.pattern} (\${p.count})" }.ifBlank { "not enough history" }}" }
+                                    pattern?.let { "Pattern cross-check: ${it.acceptedRecords} usable rows · Open family ${it.openFamilySequences.take(2).joinToString { p -> "${p.pattern} (${p.count})" }.ifBlank { "not enough history" }} · Close family ${it.closeFamilySequences.take(2).joinToString { p -> "${p.pattern} (${p.count})" }.ifBlank { "not enough history" }}" }
                                         ?: "Pattern cross-check: history abhi insufficient",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 Text(
-                                    intelligence?.let { "Pattern shift: \${it.regime} · \${it.explanation}" } ?: "Pattern shift: more historical rows needed",
+                                    intelligence?.let { "Pattern shift: ${it.regime} · ${it.explanation}" } ?: "Pattern shift: more historical rows needed",
                                     style = MaterialTheme.typography.bodySmall
                                 )
-                                Text("Source status: \${if (latest == null) "NO ROW" else "Exploratory latest row"} · Candidate index probability nahi hai; result guarantee nahi.", style = MaterialTheme.typography.labelSmall)
+                                Text("Source status: ${if (latest == null) "NO ROW" else "Exploratory latest row"} · Candidate index probability nahi hai; result guarantee nahi.", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
