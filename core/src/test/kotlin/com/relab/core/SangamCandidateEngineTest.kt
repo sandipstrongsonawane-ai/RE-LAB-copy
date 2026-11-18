@@ -52,7 +52,7 @@ class SangamCandidateEngineTest {
     }
 
     private fun datedObservations(): List<SourceObservation> {
-        val results = listOf("277-65-249", "578-07-368", "800-81-137", "566-74-148", "288-84-679")
+        val results = listOf("277-65-249", "578-07-368", "800-81-137", "566-74-148", "288-82-679")
         return results.flatMapIndexed { index, result ->
             listOf("publisher-a", "publisher-b").map { source ->
                 SourceObservation(
