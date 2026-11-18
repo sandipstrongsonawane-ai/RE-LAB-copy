@@ -9,6 +9,9 @@ import com.relab.core.PannaSide
 import com.relab.core.PredictionGrade
 import com.relab.core.PredictionVerification
 import com.relab.core.ReconciliationState
+import com.relab.core.ObservationStatus
+import com.relab.core.SourceObservation
+import com.relab.core.PredictionLearningLedger
 import com.relab.core.LockedSidePrediction
 import java.time.Instant
 import java.time.LocalDate
@@ -98,6 +101,45 @@ class LocalObservationDatabaseInstrumentedTest {
         }
         context.deleteDatabase("relab_local_history.db")
     }
+    @Test
+    fun failedBundleLedgerMergeRollsBackObservationImportToo() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("relab_local_history.db")
+        val lockedAt = Instant.parse("2026-11-18T04:00:00Z")
+        val existing = LockedSidePrediction(
+            Market.SRIDEVI, "main", LocalDate.parse("2026-11-19"), PannaSide.OPEN,
+            listOf("123"), 12, lockedAt, "existing frozen record"
+        )
+        val conflicting = existing.copy(
+            candidates = listOf("456"),
+            evidenceNote = "conflicting backup record"
+        )
+        val observation = SourceObservation(
+            market = Market.SRIDEVI,
+            sessionId = "main",
+            date = LocalDate.parse("2026-11-18"),
+            sourceId = "publisher-a",
+            retrievedAt = lockedAt,
+            publishedAt = null,
+            rawText = "backup row",
+            normalizedResult = null,
+            status = ObservationStatus.MISSING_FROM_SOURCE
+        )
+        LocalObservationDatabase(context).use { db ->
+            db.appendLockedPrediction(existing)
+            assertThrows(IllegalArgumentException::class.java) {
+                db.appendResearchBundle(
+                    "backup-csv",
+                    listOf(observation),
+                    PredictionLearningLedger(listOf(conflicting), emptyList())
+                )
+            }
+            assertEquals(emptyList<SourceObservation>(), db.loadObservations())
+            assertEquals(listOf(existing), db.loadPredictionLedger().lockedPredictions)
+        }
+        context.deleteDatabase("relab_local_history.db")
+    }
+
     @Test
     fun versionOneDatabaseMigratesWithoutDroppingObservationHistory() {
         val context = ApplicationProvider.getApplicationContext<Context>()
