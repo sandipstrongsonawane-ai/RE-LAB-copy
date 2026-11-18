@@ -26,7 +26,7 @@ python scripts/audit_archive_manifest.py path/to/manifest.csv --json
 
 The audit fails on missing files, changed bytes, malformed digests, non-HTTPS URLs, timezone-free capture timestamps, duplicate source/market/session/capture identities, or incomplete manifest columns.
 
-Only after this audit passes should the same snapshot manifest be used with the offline batch extractor:
+The batch extractor now runs this provenance audit automatically as a mandatory preflight; it refuses to emit a combined CSV if the manifest, raw bytes, or SHA-256 checks fail. You can still run the audit separately for a readable report. Use the same snapshot manifest with the offline batch extractor:
 
 ```sh
 python scripts/extract_archive_batch.py path/to/manifest.csv --output build/source-observations.csv
