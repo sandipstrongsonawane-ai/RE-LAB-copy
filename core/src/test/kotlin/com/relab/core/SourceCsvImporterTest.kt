@@ -39,6 +39,25 @@ class SourceCsvImporterTest {
         assertEquals(3, report.issues.single().rowNumber)
     }
 
+    @Test fun acceptsEscapedQuotesAndCrLfAfterQuotedFields() {
+        val csv = (header + "\r\n" +
+            "SRIDEVI,main,2026-11-09,archive-a,2026-11-09T08:00:00Z,\"say \"\"hello\"\", chart\",PENDING,row-1,,,")
+        val report = SourceCsvImporter.import(csv)
+        assertTrue(report.issues.toString(), report.issues.isEmpty())
+        assertEquals("say \"hello\", chart", report.observations.single().rawText)
+    }
+
+    @Test fun rejectsCharactersImmediatelyAfterAClosingQuote() {
+        val csv = header + "\n" +
+            "SRIDEVI,main,2026-11-09,archive-a,2026-11-09T08:00:00Z,\"raw\"oops,PENDING,row-1,,,"
+        try {
+            SourceCsvImporter.import(csv)
+            fail("Malformed CSV field should be rejected")
+        } catch (error: IllegalArgumentException) {
+            assertTrue(error.message.orEmpty().contains("after closing quote"))
+        }
+    }
+
     @Test fun rejectsUnknownOrMissingHeaders() {
         val report = SourceCsvImporter.import("market,date")
         assertTrue(report.observations.isEmpty())
