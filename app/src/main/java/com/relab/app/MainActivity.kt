@@ -579,6 +579,8 @@ private fun RelabHome(
                                     }) { Text(if (source.enabled) "Disable" else "Enable") }
                                     OutlinedButton(onClick = {
                                         marketSources = UserMarketSourceRegistry.remove(marketSources, source.url)
+                                        sourceStatuses = sourceStatuses - source.url
+                                        onSaveSourceStatuses(sourceStatuses)
                                         onSaveMarketSources(marketSources)
                                     }) { Text("Remove") }
                                     OutlinedButton(enabled = source.enabled && !linkBusy, onClick = {
