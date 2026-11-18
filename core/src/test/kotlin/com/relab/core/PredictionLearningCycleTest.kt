@@ -157,18 +157,48 @@ class PredictionLearningCycleTest {
             history(), Market.SRIDEVI, "main", target, PannaSide.OPEN, locked,
             limit = 10, minimumHistory = 5
         )
-        val outcomes = listOf(
-            observation(target, "publisher-a", result("123", "456")),
-            observation(target, "publisher-b", result("123", "456"))
+        val actual = result(prediction.candidates.first(), "456")
+        val firstPublisher = observation(target, "publisher-a", actual)
+        val (afterGrey, first) = PredictionLearningCycle.verify(
+            ledger, prediction.id, listOf(firstPublisher), verified
         )
-        val (after, _) = PredictionLearningCycle.verify(ledger, prediction.id, outcomes, verified)
+        assertEquals(PredictionGrade.GREY, first.grade)
+
+        val consensus = listOf(firstPublisher, observation(target, "publisher-b", actual))
         val (rechecked, second) = PredictionLearningCycle.verify(
-            after, prediction.id, outcomes, verified.plusSeconds(60)
+            afterGrey, prediction.id, consensus, verified.plusSeconds(60)
         )
+        assertEquals(PredictionGrade.GREEN, second.grade)
         assertEquals(2, second.attempt)
         assertEquals(2, rechecked.verifications.size)
+        assertEquals(PredictionGrade.GREY, rechecked.verifications.first().grade)
+        assertEquals(PredictionGrade.GREEN, rechecked.verifications.last().grade)
         assertEquals(1, rechecked.performance(Market.SRIDEVI, "main", PannaSide.OPEN).green)
-        assertEquals(1, after.verifications.size)
-        assertEquals(1, after.verifications.single().attempt)
+        assertEquals(1, afterGrey.verifications.size)
+        assertEquals(1, afterGrey.verifications.single().attempt)
+    }
+
+    @Test fun terminalGreenOrRedCannotBeVerifiedAgain() {
+        val target = LocalDate.of(2026, 10, 9)
+        val (ledger, prediction) = PredictionLearningCycle.lock(
+            history(), Market.SRIDEVI, "main", target, PannaSide.OPEN, locked,
+            limit = 10, minimumHistory = 5
+        )
+        val actual = result(prediction.candidates.first(), "456")
+        val consensus = listOf(
+            observation(target, "publisher-a", actual),
+            observation(target, "publisher-b", actual)
+        )
+        val (verifiedLedger, first) = PredictionLearningCycle.verify(
+            ledger, prediction.id, consensus, verified
+        )
+        assertEquals(PredictionGrade.GREEN, first.grade)
+        try {
+            PredictionLearningCycle.verify(verifiedLedger, prediction.id, consensus, verified.plusSeconds(60))
+            fail("Expected terminal prediction verification to be rejected")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("terminal"))
+        }
+        assertEquals(1, verifiedLedger.verifications.size)
     }
 }
