@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 from extract_weekly_chart_html import extract_rows, write_csv
+from audit_archive_manifest import audit_manifest
 
 MANIFEST_FIELDS = (
     "html_file", "market", "session_id", "source_id", "retrieved_at"
@@ -116,6 +117,14 @@ def main() -> int:
         help="combined source-observation CSV path (default: stdout)"
     )
     args = parser.parse_args()
+
+    # Provenance is a mandatory CLI gate: never emit a production batch from
+    # snapshots whose bytes/source identity have not passed the SHA-256 audit.
+    audit = audit_manifest(args.manifest_csv)
+    if not audit["ok"]:
+        for error in audit["errors"]:
+            print(f"PROVENANCE ERROR: {error}", file=sys.stderr)
+        return 2
 
     rows, warnings, errors = extract_manifest(args.manifest_csv)
     for warning in warnings:
