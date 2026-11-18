@@ -813,7 +813,7 @@ private fun RelabHome(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (patternAnalyses.isEmpty()) {
-                    Text("No valid published rows available for pattern analysis yet. Check the imported chart rows and source format.")
+                    Text(uiText(uiLanguage, "No valid published rows available for pattern analysis yet. Check the imported chart rows and source format.", "पैटर्न विश्लेषण के लिए अभी वैध प्रकाशित रिकॉर्ड नहीं हैं। इम्पोर्ट किए गए चार्ट रिकॉर्ड और सोर्स फॉर्मेट जांचें।", "पॅटर्न विश्लेषणासाठी अद्याप वैध प्रकाशित नोंदी नाहीत. आयात केलेल्या चार्ट नोंदी आणि स्रोत फॉरमॅट तपासा."))
                 } else {
                     patternAnalyses.forEach { analysis -> PatternResearchCard(analysis) }
                 }
@@ -823,7 +823,7 @@ private fun RelabHome(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (intelligenceReports.isEmpty()) {
-                    Text("Market intelligence will appear after valid published chart rows are available.")
+                    Text(uiText(uiLanguage, "Market intelligence will appear after valid published chart rows are available.", "वैध प्रकाशित चार्ट रिकॉर्ड आने पर मार्केट इंटेलिजेंस दिखेगा।", "वैध प्रकाशित चार्ट नोंदी उपलब्ध झाल्यावर मार्केट इंटेलिजन्स दिसेल."))
                 } else {
                     intelligenceReports.forEach { MarketIntelligenceCard(it) }
                 }
@@ -833,7 +833,7 @@ private fun RelabHome(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (selfLearningReports.isEmpty()) {
-                    Text("Self-learning hypotheses will appear when enough valid historical rows are available.")
+                    Text(uiText(uiLanguage, "Self-learning hypotheses will appear when enough valid historical rows are available.", "पर्याप्त वैध पुराने रिकॉर्ड मिलने पर सेल्फ-लर्निंग नियम दिखेंगे।", "पुरेशा वैध ऐतिहासिक नोंदी उपलब्ध झाल्यावर सेल्फ-लर्निंग नियम दिसतील."))
                 } else {
                     selfLearningReports.forEach { report ->
                         Card(
@@ -867,7 +867,7 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Next draw candidate research", "अगले रिजल्ट के कैंडिडेट", "पुढील निकालाचे उमेदवार"), style = MaterialTheme.typography.titleLarge)
                 if (candidateSets.isEmpty()) {
-                    Text("No usable published history yet. Candidates require at least 5 earlier valid rows; single-source results are exploratory and remain unverified.")
+                    Text(uiText(uiLanguage, "No usable published history yet. Candidates require at least 5 earlier valid rows; single-source results are exploratory and remain unverified.", "अभी उपयोगी प्रकाशित इतिहास नहीं है। कैंडिडेट के लिए कम से कम 5 पुराने वैध रिकॉर्ड चाहिए; एकल-स्रोत परिणाम खोजात्मक और अप्रमाणित रहते हैं।", "अद्याप वापरण्यायोग्य प्रकाशित इतिहास नाही. उमेदवारांसाठी किमान 5 आधीच्या वैध नोंदी आवश्यक आहेत; एक-स्रोत निकाल शोधात्मक व अपडताळलेले राहतात."))
                 } else {
                     candidateSets.forEach { (open, close, jodi) ->
                         CandidateResearchCard(open, close, jodi)
@@ -879,7 +879,7 @@ private fun RelabHome(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (candidateWalkForwardReports.isEmpty()) {
-                    Text("Candidate-specific backtest will appear when valid historical chart rows are available.")
+                    Text(uiText(uiLanguage, "Candidate-specific backtest will appear when valid historical chart rows are available.", "वैध पुराने चार्ट रिकॉर्ड उपलब्ध होने पर कैंडिडेट बैकटेस्ट दिखेगा।", "वैध ऐतिहासिक चार्ट नोंदी उपलब्ध झाल्यावर उमेदवार बॅकटेस्ट दिसेल."))
                 } else {
                     candidateWalkForwardReports.forEach { CandidateWalkForwardCard(it) }
                 }
@@ -887,7 +887,7 @@ private fun RelabHome(
                 if (activeSection == "audit") {
                 Text(uiText(uiLanguage, "Historical coverage audit", "पुराने डेटा की कवरेज जांच", "ऐतिहासिक डेटा कव्हरेज तपासणी"), style = MaterialTheme.typography.titleLarge)
                 if (coverageReports.isEmpty()) {
-                    Text("Coverage audit will appear after source data is imported.")
+                    Text(uiText(uiLanguage, "Coverage audit will appear after source data is imported.", "सोर्स डेटा इम्पोर्ट होने पर कवरेज ऑडिट दिखेगा।", "स्रोत डेटा आयात केल्यानंतर कव्हरेज तपासणी दिसेल."))
                 } else {
                     coverageReports.forEach { coverage ->
                         CoverageReportCard(coverage) { start, end ->
@@ -899,7 +899,7 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Per-URL publisher coverage", "हर URL की पब्लिशर कवरेज", "प्रत्येक URL ची प्रकाशक कव्हरेज"), style = MaterialTheme.typography.titleLarge)
                 if (publisherCoverageReports.isEmpty()) {
-                    Text("Add a chart URL to start tracking date-wise coverage for each publisher URL.")
+                    Text(uiText(uiLanguage, "Add a chart URL to start tracking date-wise coverage for each publisher URL.", "हर पब्लिशर URL की तारीख के अनुसार कवरेज देखने के लिए चार्ट URL जोड़ें।", "प्रत्येक प्रकाशक URL चे तारखेनुसार कव्हरेज पाहण्यासाठी चार्ट URL जोडा."))
                 } else {
                     publisherCoverageReports.forEach { coverage ->
                         PublisherCoverageReportCard(coverage, sourceStatuses)
@@ -907,13 +907,13 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Repeated source-record audit", "दोहराए गए सोर्स रिकॉर्ड की जांच", "पुनरावृत्ती झालेल्या स्रोत नोंदींची तपासणी"), style = MaterialTheme.typography.titleLarge)
                 if (repeatedSourceRecords.isEmpty()) {
-                    Text("No repeated source-record IDs found. Records without a source record ID are not guessed or grouped.")
+                    Text(uiText(uiLanguage, "No repeated source-record IDs found. Records without a source record ID are not guessed or grouped.", "दोहराए गए सोर्स रिकॉर्ड ID नहीं मिले। जिन रिकॉर्ड में ID नहीं है, उनका अनुमान लगाकर समूह नहीं बनाया जाता।", "पुनरावृत्ती झालेले स्रोत-नोंद ID आढळले नाहीत. ID नसलेल्या नोंदींचा अंदाज लावून गट केला जात नाही."))
                 } else {
                     DuplicateObservationAuditCard(repeatedSourceRecords)
                 }
-                Text("Repeated result across dates · stale archive review", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Repeated result across dates · stale archive review", "अलग-अलग तारीखों पर दोहराया परिणाम · पुराने आर्काइव की जांच", "वेगवेगळ्या तारखांवरील पुनरावृत्ती निकाल · जुन्या संग्रहाची तपासणी"), style = MaterialTheme.typography.titleLarge)
                 if (repeatedPublishedResults.isEmpty()) {
-                    Text("No identical published result repeated across 3 or more distinct dates by the same source.")
+                    Text(uiText(uiLanguage, "No identical published result repeated across 3 or more distinct dates by the same source.", "एक ही सोर्स से 3 या अधिक अलग तारीखों पर समान प्रकाशित परिणाम नहीं मिला।", "एकाच स्रोताकडून 3 किंवा अधिक वेगवेगळ्या तारखांना समान प्रकाशित निकाल आढळला नाही."))
                 } else {
                     RepeatedPublishedResultAuditCard(repeatedPublishedResults)
                 }
@@ -942,7 +942,7 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Recent source observations", "हाल के सोर्स रिकॉर्ड", "अलीकडील स्रोत नोंदी"), style = MaterialTheme.typography.titleLarge)
                 if (groups.isEmpty()) {
-                    Text("No source records loaded.")
+                    Text(uiText(uiLanguage, "No source records loaded.", "कोई सोर्स रिकॉर्ड लोड नहीं हुआ।", "कोणत्याही स्रोत नोंदी लोड झालेल्या नाहीत."))
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         groups.asReversed().take(30).forEach { group -> SourceGroupCard(group) }
