@@ -91,3 +91,113 @@ object SangamCandidateEngine {
         return SangamResearchSet(half, fullSangam)
     }
 }
+
+
+data class SangamWalkForwardReport(
+    val market: Market,
+    val sessionId: String,
+    val totalTargetDates: Int,
+    val evaluatedDates: Int,
+    val insufficientHistoryDates: Int,
+    val halfTop1Hits: Int,
+    val halfTop3Hits: Int,
+    val halfTop5Hits: Int,
+    val fullTop1Hits: Int,
+    val fullTop3Hits: Int,
+    val fullTop5Hits: Int,
+    val warning: String
+) {
+    fun halfHitRate(hits: Int): Double? = if (evaluatedDates == 0) null else hits.toDouble() / evaluatedDates
+    fun fullHitRate(hits: Int): Double? = if (evaluatedDates == 0) null else hits.toDouble() / evaluatedDates
+}
+
+/**
+ * Chronological Sangam backtest. Each target date is scored only after candidates
+ * are generated from strictly earlier eligible rows. Consensus is the default;
+ * single-publisher exploration must be explicitly requested and remains labelled.
+ */
+object SangamWalkForwardEvaluator {
+    fun evaluate(
+        observations: List<SourceObservation>,
+        market: Market,
+        sessionId: String,
+        minimumHistory: Int = 5,
+        topN: Int = 10,
+        allowSingleSourceExploration: Boolean = false,
+        startDateInclusive: java.time.LocalDate? = null,
+        endDateExclusive: java.time.LocalDate? = null
+    ): SangamWalkForwardReport {
+        require(sessionId.isNotBlank()) { "Session ID is required" }
+        require(minimumHistory >= 1) { "Minimum history must be at least 1" }
+        require(topN in 1..100) { "Top N must be between 1 and 100" }
+        require(startDateInclusive == null || endDateExclusive == null ||
+            startDateInclusive.isBefore(endDateExclusive)) {
+            "End date must be after start date"
+        }
+
+        val eligible = (if (allowSingleSourceExploration) {
+            ReconciledChartBuilder.buildExploratoryRecords(observations)
+        } else {
+            ReconciledChartBuilder.build(observations).records
+        }).filter { it.market == market && it.sessionId == sessionId }
+            .filter { endDateExclusive == null || it.date.isBefore(endDateExclusive) }
+            .sortedBy { it.date }
+        require(eligible.map { it.date }.distinct().size == eligible.size) {
+            "Duplicate dates must be reconciled before Sangam backtesting"
+        }
+
+        val targets = eligible.filter { startDateInclusive == null || !it.date.isBefore(startDateInclusive) }
+        val prior = mutableListOf<ChartRecord>()
+        var index = 0
+        var evaluated = 0
+        var half1 = 0
+        var half3 = 0
+        var half5 = 0
+        var full1 = 0
+        var full3 = 0
+        var full5 = 0
+
+        targets.forEach { actual ->
+            while (index < eligible.size && eligible[index].date.isBefore(actual.date)) {
+                prior += eligible[index]
+                index++
+            }
+            val open = CandidateRankingEngine.rankRecords(
+                prior, market, sessionId, actual.date, PannaSide.OPEN,
+                limit = topN, minimumHistory = minimumHistory
+            )
+            val close = CandidateRankingEngine.rankRecords(
+                prior, market, sessionId, actual.date, PannaSide.CLOSE,
+                limit = topN, minimumHistory = minimumHistory
+            )
+            if (open.abstained || close.abstained) return@forEach
+
+            val sangam = SangamCandidateEngine.derive(open.candidates, close.candidates, topN)
+            val actualOpenAnk = actual.openPanna.sumOf { it.digitToInt() } % 10
+            val actualCloseAnk = actual.closePanna.sumOf { it.digitToInt() } % 10
+            val actualHalf = setOf("\${actual.openPanna}-\${actualCloseAnk}", "\${actualOpenAnk}-\${actual.closePanna}")
+            val actualFull = "\${actual.openPanna}-\${actual.closePanna}"
+            val halfRanks = sangam.halfSangam.map { it.label }
+            val fullRanks = sangam.fullSangam.map { it.label }
+            evaluated++
+            if (halfRanks.take(1).any { it in actualHalf }) half1++
+            if (halfRanks.take(3).any { it in actualHalf }) half3++
+            if (halfRanks.take(5).any { it in actualHalf }) half5++
+            if (fullRanks.take(1).contains(actualFull)) full1++
+            if (fullRanks.take(3).contains(actualFull)) full3++
+            if (fullRanks.take(5).contains(actualFull)) full5++
+        }
+
+        val insufficient = targets.size - evaluated
+        val warning = when {
+            evaluated == 0 -> "No target dates had \${minimumHistory} strictly earlier eligible records. No hit rate is available."
+            evaluated < 30 -> "Low sample: only \${evaluated} historical target dates were evaluated. Rates are descriptive and unstable."
+            allowSingleSourceExploration -> "Exploratory single-publisher backtest. Not independently verified; no future probability is implied."
+            else -> "Consensus-only historical backtest. Past hit rates do not imply future probability or guarantee."
+        }
+        return SangamWalkForwardReport(
+            market, sessionId, targets.size, evaluated, insufficient,
+            half1, half3, half5, full1, full3, full5, warning
+        )
+    }
+}
