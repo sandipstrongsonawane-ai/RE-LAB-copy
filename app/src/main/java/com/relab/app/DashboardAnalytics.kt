@@ -18,6 +18,7 @@ internal data class DashboardAnalytics(
     val intelligenceReports: List<MarketIntelligenceReport>,
     val candidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
     val sangamResearchSets: List<SangamResearchSet>,
+    val sangamWalkForwardReports: List<SangamWalkForwardReport>,
     val selfLearningReports: List<HypothesisDiscoveryReport>,
     val candidateWalkForwardReports: List<CandidateWalkForwardReport>,
     val coverageReports: List<CoverageReport>,
@@ -65,6 +66,17 @@ internal data class DashboardAnalytics(
             val sangamResearchSets = candidateSets.map { (open, close, _) ->
                 SangamCandidateEngine.derive(open.candidates, close.candidates, limit = 10)
             }
+
+            val sangamWalkForwardReports = researchRecords
+                .map { it.market to it.sessionId }
+                .distinct()
+                .map { (market, sessionId) ->
+                    SangamWalkForwardEvaluator.evaluate(
+                        observations, market, sessionId,
+                        minimumHistory = 5, topN = 10,
+                        allowSingleSourceExploration = false
+                    )
+                }
 
             val selfLearningReports = chartBuild.records
                 .map { it.market to it.sessionId }
@@ -160,6 +172,7 @@ internal data class DashboardAnalytics(
                 intelligenceReports = intelligenceReports,
                 candidateSets = candidateSets,
                 sangamResearchSets = sangamResearchSets,
+                sangamWalkForwardReports = sangamWalkForwardReports,
                 selfLearningReports = selfLearningReports,
                 candidateWalkForwardReports = candidateWalkForwardReports,
                 coverageReports = coverageReports,
