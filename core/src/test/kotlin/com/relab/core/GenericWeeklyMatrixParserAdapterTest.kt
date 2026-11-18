@@ -354,4 +354,29 @@ class GenericWeeklyMatrixParserAdapterTest {
         })
     }
 
+
+    @Test
+    fun parsesSattaMatkaiStyleDatedPanelMatrixAndPreservesStarredRows() {
+        val html = """
+            <html><body><table>
+              <tr><th>Date</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>
+              <tr><td>17/10/2022 to 22/10/2022</td>
+                <td>7 8 0 51 4 8 9</td><td>1 9 0 07 1 1 5</td>
+                <td>3 6 7 63 5 9 9</td><td>7 9 0 69 2 8 9</td>
+                <td>2 7 9 83 3 5 5</td><td>2 5 8 54 1 5 8</td></tr>
+              <tr><td>24/10/2022 to 29/10/2022</td>
+                <td>* * * ** * * *</td><td>1 2 3 45 4 5 6</td>
+                <td>2 3 4 56 5 6 7</td><td>3 4 5 67 6 7 8</td>
+                <td>4 5 6 78 7 8 9</td><td>5 6 7 89 8 9 0</td></tr>
+            </table></body></html>
+        """.trimIndent()
+        val result = ChartParserRegistry.parse(
+            html, "https://sattamatkai.in/panel-chart-record/kalyan",
+            Market.KALYAN, "main", java.time.Instant.parse("2026-11-18T00:00:00Z")
+        )
+        assertEquals(12, result.observations.size)
+        assertEquals("780-51-489", result.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.PENDING, result.observations[6].status)
+        assertEquals("sattamatkai.in", result.observations.first().sourceId)
+    }
 }
