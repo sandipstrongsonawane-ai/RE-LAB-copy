@@ -533,6 +533,54 @@ private fun RelabHome(
                 Text(uiText(uiLanguage, "Quick start", "त्वरित शुरुआत", "जलद सुरुवात"), style = MaterialTheme.typography.titleMedium)
                 Text(uiText(uiLanguage, "5 markets · Offline chart research", "5 मार्केट · ऑफलाइन चार्ट रिसर्च", "5 मार्केट · ऑफलाइन चार्ट संशोधन"), style = MaterialTheme.typography.bodySmall)
                 Text(uiText(uiLanguage, "Paste a supported chart URL. RE-LAB detects the market from its source path.", "सपोर्टेड चार्ट URL डालें। RE-LAB सोर्स पाथ से मार्केट पहचानता है।", "समर्थित चार्ट URL पेस्ट करा. RE-LAB सोर्स पाथवरून मार्केट ओळखते."))
+                Text(uiText(uiLanguage, "Aaj ka market research · Day / Night", "आज का मार्केट रिसर्च · डे / नाइट", "आजचे मार्केट संशोधन · डे / नाइट"), style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Har market ka latest result, next research candidates aur unka evidence yahin dikhega. Score chance % nahi hai; sirf historical pattern index hai.", "हर मार्केट का ताज़ा रिजल्ट, अगले रिसर्च कैंडिडेट और उनका आधार यहां दिखेगा। स्कोर जीतने की संभावना नहीं, सिर्फ पुराने पैटर्न का इंडेक्स है।", "प्रत्येक मार्केटचा ताजा निकाल, पुढील संशोधन उमेदवार आणि त्यांचा आधार येथे दिसेल. स्कोअर जिंकण्याची शक्यता नाही; तो फक्त ऐतिहासिक पॅटर्न इंडेक्स आहे."), style = MaterialTheme.typography.bodySmall)
+                if (candidateSets.isEmpty()) {
+                    Text(uiText(uiLanguage, "Abhi market sources register nahi hue. Sources tab check karein.", "अभी मार्केट सोर्स रजिस्टर नहीं हुए। Sources टैब देखें।", "अद्याप मार्केट स्रोत नोंदलेले नाहीत. Sources टॅब तपासा."))
+                } else {
+                    candidateSets.forEach { (open, close, jodi) ->
+                        val market = open.market
+                        val marketKind = when {
+                            market.name.contains("NIGHT") || open.sessionId.equals("night", true) -> "NIGHT MARKET"
+                            market.name.contains("DAY") || market.name.contains("MORNING") -> "DAY / MORNING MARKET"
+                            else -> "DAY / MAIN MARKET"
+                        }
+                        val latest = researchRecords.filter { it.market == market && it.sessionId == open.sessionId }.maxByOrNull { it.date }
+                        val pattern = patternAnalyses.firstOrNull { it.market == market && it.sessionId == open.sessionId }
+                        val intelligence = intelligenceReports.firstOrNull { it.market == market && it.sessionId == open.sessionId }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("\${market.name.replace('_', ' ')}  ·  $marketKind", style = MaterialTheme.typography.titleMedium)
+                                Text("Session: \${open.sessionId}  ·  Target: \${open.targetDate}", style = MaterialTheme.typography.labelSmall)
+                                Text(
+                                    latest?.let { "Latest available result (\${it.date}): \${it.openPanna} - \${it.jodi} - \${it.closePanna}" }
+                                        ?: "Latest result: abhi verified / imported row available nahi hai",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                if (open.abstained || close.abstained) {
+                                    Text("NEXT RESEARCH: Abhi candidate nahi — \${open.note}", style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    Text("OPEN PANNA research: \${open.candidates.take(3).joinToString("  ·  ") { "\${it.panna} (index \${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("CLOSE PANNA research: \${close.candidates.take(3).joinToString("  ·  ") { "\${it.panna} (index \${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("JODI research: \${jodi.take(5).joinToString("  ·  ") { "\${it.jodi} (index \${"%.1f".format(it.score)})" }.ifBlank { "Not enough paired evidence" }}", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Text(
+                                    pattern?.let { "Pattern cross-check: \${it.acceptedRecords} usable rows · Open family \${it.openFamilySequences.take(2).joinToString { p -> "\${p.pattern} (\${p.count})" }.ifBlank { "not enough history" }} · Close family \${it.closeFamilySequences.take(2).joinToString { p -> "\${p.pattern} (\${p.count})" }.ifBlank { "not enough history" }}" }
+                                        ?: "Pattern cross-check: history abhi insufficient",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    intelligence?.let { "Pattern shift: \${it.regime} · \${it.explanation}" } ?: "Pattern shift: more historical rows needed",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text("Source status: \${if (latest == null) "NO ROW" else "Exploratory latest row"} · Candidate index probability nahi hai; result guarantee nahi.", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(uiText(uiLanguage, "Self-learning prediction ledger", "सेल्फ-लर्निंग प्रेडिक्शन रिकॉर्ड", "सेल्फ-लर्निंग प्रेडिक्शन नोंद"), style = MaterialTheme.typography.titleMedium)
