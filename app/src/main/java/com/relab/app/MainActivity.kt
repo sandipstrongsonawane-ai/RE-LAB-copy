@@ -353,6 +353,7 @@ private fun RelabHome(
     val researchRecords = dashboardAnalytics?.researchRecords.orEmpty()
     val patternAnalyses = dashboardAnalytics?.patternAnalyses.orEmpty()
     val intelligenceReports = dashboardAnalytics?.intelligenceReports.orEmpty()
+    val crossMarketReport = dashboardAnalytics?.crossMarketReport
     val candidateSets = dashboardAnalytics?.candidateSets.orEmpty()
     val sangamResearchSets = dashboardAnalytics?.sangamResearchSets.orEmpty()
     val sangamWalkForwardReports = dashboardAnalytics?.sangamWalkForwardReports.orEmpty()
@@ -1020,6 +1021,54 @@ private fun RelabHome(
                             }
                         }
                     }
+                }
+                Text(
+                    uiText(uiLanguage, "Cross-market reverse engineering · relationship discovery", "क्रॉस-मार्केट रिवर्स इंजीनियरिंग · संबंध खोज", "क्रॉस-मार्केट रिव्हर्स इंजिनिअरिंग · संबंध शोध"),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                val crossReport = crossMarketReport
+                if (crossReport == null) {
+                    Text(uiText(uiLanguage, "Cross-market analysis is loading with the research snapshot.", "क्रॉस-मार्केट विश्लेषण रिसर्च डेटा के साथ लोड हो रहा है।", "क्रॉस-मार्केट विश्लेषण संशोधन डेटासह लोड होत आहे."))
+                } else {
+                    Text(
+                        "Series: ${crossReport.seriesAnalyzed} · tested relationships: ${crossReport.pairComparisons} · invalid rows skipped: ${crossReport.invalidRecordsSkipped}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (crossReport.associations.isEmpty()) {
+                        Text(uiText(uiLanguage, "No relationship passed the minimum overlap yet. More reconciled history is needed; no cross-market link is assumed.", "अभी कोई संबंध न्यूनतम डेटा शर्त पूरी नहीं करता। अधिक मिलान किया हुआ इतिहास चाहिए; कोई संबंध मानकर नहीं चला जाएगा।", "अद्याप कोणताही संबंध किमान डेटा अट पूर्ण करत नाही. अधिक जुळवलेला इतिहास आवश्यक आहे; कोणताही संबंध गृहीत धरला जाणार नाही."))
+                    } else {
+                        crossReport.associations.take(15).forEach { association ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        "${association.firstMarket}/${association.firstSessionId} ↔ ${association.secondMarket}/${association.secondSessionId}",
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Text(
+                                        "${association.metric} · lag ${association.lagDays} day(s) · overlap ${association.pairedRecords}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        "NMI ${"%.3f".format(association.normalizedMutualInformation)} · MI ${"%.3f".format(association.mutualInformationBits)} bits · adjusted p ${"%.3f".format(association.adjustedPValue)}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        if (association.statisticallyUnusual) "UNUSUAL IN THIS HISTORICAL SAMPLE · validate out of sample"
+                                        else "No statistically unusual association at current thresholds",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (association.statisticallyUnusual) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Text(crossReport.note, style = MaterialTheme.typography.labelSmall)
                 }
                 Text(uiText(uiLanguage, "Next draw candidate research", "अगले रिजल्ट के कैंडिडेट", "पुढील निकालाचे उमेदवार"), style = MaterialTheme.typography.titleLarge)
                 if (candidateSets.isEmpty()) {
