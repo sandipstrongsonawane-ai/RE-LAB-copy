@@ -170,7 +170,7 @@ object MatkaFlashHistoryParserAdapter : ChartParserAdapter {
             )
             if (!valid) issues += "History row ${index + 2}: ${(validation as ValidationResult.Invalid).reasons.joinToString()}"
         }
-        return ChartParserResult(id, observations.distinctBy { it.date }, skipped, issues)
+        return ChartParserResult(id, observations, skipped, issues)
     }
 }
 
@@ -297,7 +297,7 @@ object FixResultKalyanWeeklyParserAdapter : ChartParserAdapter {
                 if (!valid) issues += "Weekly row ${rowIndex + 2}, ${listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[dayIndex]}: ${(validation as ValidationResult.Invalid).reasons.joinToString()}"
             }
         }
-        return ChartParserResult(id, observations.distinctBy { it.date }, skipped, issues)
+        return ChartParserResult(id, observations, skipped, issues)
     }
 }
 
