@@ -17,7 +17,8 @@ object MatkaFlashMarketDirectoryAdapter {
         require(page.host?.lowercase(Locale.ROOT)?.removePrefix("www.") == "matkaflash.com") {
             "Only the MatkaFlash market directory is supported."
         }
-        require(page.path.trimEnd('/') == "/charts" && page.rawQuery.orEmpty().contains("type=panel")) {
+        val query = page.rawQuery.orEmpty()
+        require(page.path.trimEnd('/') == "/charts" && (query.isBlank() || query.split("&").any { it == "type=panel" })) {
             "URL is not the MatkaFlash panel-chart directory."
         }
 
