@@ -14,7 +14,8 @@ object ResearchBundleExporter {
         consensusRecords: List<ChartRecord>,
         analyses: List<MarketAnalysis>,
         coverageReports: List<CoverageReport>,
-        generatedAt: Instant
+        generatedAt: Instant,
+        predictionLedger: PredictionLearningLedger = PredictionLearningLedger()
     ): ByteArray {
         val artifacts = linkedMapOf(
             "source-observations.csv" to SourceCsvExporter.export(observations),
@@ -22,6 +23,7 @@ object ResearchBundleExporter {
             "walk-forward-audit.csv" to WalkForwardCsvExporter.export(analyses),
             "historical-coverage-audit.csv" to CoverageCsvExporter.export(coverageReports),
             "source-publication-timing.csv" to SourceTimingAnalytics.exportCsv(observations),
+            "prediction-learning-ledger.csv" to PredictionLedgerCsvCodec.export(predictionLedger),
             "research-manifest.json" to ResearchManifestExporter.export(
                 observations, consensusRecords, analyses, generatedAt
             ),
@@ -63,14 +65,14 @@ object ResearchBundleExporter {
         appendLine("Source observations: ${observations.size}")
         appendLine("Multi-source consensus chart records: ${records.size}")
         appendLine("Market/session analyses: ${analyses.size}")
-        appendLine("Coverage reports: ${coverage.size}")
+        appendLine("Coverage reports: ${coverage.size}")\n        appendLine("Locked predictions: ${predictionLedger.lockedPredictions.size}")\n        appendLine("Verification attempts: ${predictionLedger.verifications.size}")
         appendLine()
         appendLine("Files:")
         appendLine("- source-observations.csv: full raw source ledger and provenance")
         appendLine("- derived-consensus-research.csv: validated multi-source consensus records only")
         appendLine("- walk-forward-audit.csv: chronological out-of-sample baseline audit")
         appendLine("- historical-coverage-audit.csv: expected-day coverage states")
-        appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")
+        appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")\n        appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")
         appendLine("- research-manifest.json: dataset checksum, reconciliation and timing metadata")
         appendLine("- bundle-index.json: SHA-256 and byte size for every other artifact")
         appendLine()
