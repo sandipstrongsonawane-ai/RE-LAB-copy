@@ -43,11 +43,13 @@ internal data class DashboardAnalytics(
                     val target = LocalDate.now()
                     val open = CandidateRankingEngine.rank(
                         observations, market, sessionId, target, PannaSide.OPEN,
-                        limit = 10, minimumHistory = 5, allowSingleSourceExploration = true
+                        limit = 10, minimumHistory = 5, allowSingleSourceExploration = true,
+                        learningLedger = learningLedger
                     )
                     val close = CandidateRankingEngine.rank(
                         observations, market, sessionId, target, PannaSide.CLOSE,
-                        limit = 10, minimumHistory = 5, allowSingleSourceExploration = true
+                        limit = 10, minimumHistory = 5, allowSingleSourceExploration = true,
+                        learningLedger = learningLedger
                     )
                     Triple(open, close, CandidateRankingEngine.deriveJodiCandidates(
                         open.candidates, close.candidates, limit = 10
