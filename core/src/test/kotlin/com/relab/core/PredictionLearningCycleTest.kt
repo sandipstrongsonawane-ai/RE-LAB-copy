@@ -178,6 +178,36 @@ class PredictionLearningCycleTest {
         assertEquals(1, afterGrey.verifications.single().attempt)
     }
 
+    @Test fun ledgerRejectsGapsAndAttemptsAfterTerminalGrade() {
+        val target = LocalDate.of(2026, 10, 9)
+        val (_, prediction) = PredictionLearningCycle.lock(
+            history(), Market.SRIDEVI, "main", target, PannaSide.OPEN, locked,
+            limit = 10, minimumHistory = 5
+        )
+        val grey = PredictionVerification(
+            prediction.id, PredictionGrade.GREY, null, null, null, verified,
+            ReconciliationState.SINGLE_SOURCE_UNVERIFIED, "Provisional.", attempt = 1
+        )
+        val green = grey.copy(
+            grade = PredictionGrade.GREEN, actualPanna = prediction.candidates.first(),
+            matchedRank = 1, reconciliationState = ReconciliationState.CONSENSUS,
+            explanation = "Consensus.", attempt = 2
+        )
+        val invalid = green.copy(attempt = 3)
+        try {
+            PredictionLearningLedger(listOf(prediction), listOf(grey, green, invalid))
+            fail("Expected attempts after terminal grade to be rejected")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("terminal"))
+        }
+        try {
+            PredictionLearningLedger(listOf(prediction), listOf(grey, green.copy(attempt = 3)))
+            fail("Expected missing attempt number to be rejected")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("sequential"))
+        }
+    }
+
     @Test fun terminalGreenOrRedCannotBeVerifiedAgain() {
         val target = LocalDate.of(2026, 10, 9)
         val (ledger, prediction) = PredictionLearningCycle.lock(
