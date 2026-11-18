@@ -800,8 +800,10 @@ private fun RelabHome(
                                 onClick = {
                                     refreshRegisteredSources(marketSources, onSaveLinkObservations, { snapshots ->
                                         onSaveSourceSnapshots(snapshots)
-                                        sourceSnapshots = (sourceSnapshots + snapshots).distinctBy {
-                                            listOf(it.sourceId, it.market.name, it.sessionId, it.requestedUrl, it.retrievedAt.toString(), it.sha256).joinToString("|")
+                                        Handler(Looper.getMainLooper()).post {
+                                            sourceSnapshots = (sourceSnapshots + snapshots).distinctBy {
+                                                listOf(it.sourceId, it.market.name, it.sessionId, it.requestedUrl, it.retrievedAt.toString(), it.sha256).joinToString("|")
+                                            }
                                         }
                                     }, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
                                 },
