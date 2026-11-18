@@ -1300,6 +1300,19 @@ private fun HomeReverseEngineeringCard(
             Text("Dataset: ${analysis.acceptedRecords} valid rows · ${analysis.rejectedRecords} rejected", style = MaterialTheme.typography.bodySmall)
             Text("1) Family transition · Open: ${topCounts(analysis.openFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
+            val familyLabels = listOf("0/5", "1/6", "2/7", "3/8", "4/9")
+            @Composable fun TransitionMatrix(title: String, matrix: List<List<Int>>) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, style = MaterialTheme.typography.labelMedium)
+                    Text("Prev ↓ / Next →   " + familyLabels.joinToString("   "), style = MaterialTheme.typography.labelSmall)
+                    matrix.forEachIndexed { row, counts ->
+                        Text("${familyLabels[row].padEnd(5)}   " + counts.joinToString("      "), style = MaterialTheme.typography.labelSmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                    }
+                }
+            }
+            TransitionMatrix("Open family transition matrix · previous row → next row", analysis.openFamilyDigitTransitions)
+            TransitionMatrix("Close family transition matrix · previous row → next row", analysis.closeFamilyDigitTransitions)
+            Text("Counts combine transitions at all 3 digit positions between consecutive valid dates. They are counts, not probabilities.", style = MaterialTheme.typography.labelSmall)
             Text("2) Weekday pattern · ${topWeekday(analysis.openWeekdayCounts)}", style = MaterialTheme.typography.bodySmall)
             Text("3) Ank frequency · Open: ${topCounts(analysis.openAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
