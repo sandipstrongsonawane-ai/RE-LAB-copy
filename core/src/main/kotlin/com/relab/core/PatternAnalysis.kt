@@ -160,28 +160,42 @@ object PatternAnalysis {
         val weekdayOpen = accepted.groupingBy { it.date.dayOfWeek }.eachCount()
         val weekdayClose = accepted.groupingBy { it.date.dayOfWeek }.eachCount()
         val rows = mutableListOf<WalkForwardRow>()
-        for (i in 1 until accepted.size) {
-            val openHistory = openSeq.take(i)
-            val openWeekdayHistory = (0 until i)
-                .filter { accepted[it].date.dayOfWeek == accepted[i].date.dayOfWeek }
-                .map { openSeq[it] }
-            val closeHistory = closeSeq.take(i)
-            val closeWeekdayHistory = (0 until i)
-                .filter { accepted[it].date.dayOfWeek == accepted[i].date.dayOfWeek }
-                .map { closeSeq[it] }
-            val openGlobalMode = mode(openHistory)
-            val closeGlobalMode = mode(closeHistory)
-            rows += WalkForwardRow(
-                date = accepted[i].date,
-                actualOpenFamilySequence = openSeq[i],
-                globalModePrediction = openGlobalMode,
-                weekdayModePrediction = if (openWeekdayHistory.isEmpty()) openGlobalMode else mode(openWeekdayHistory),
-                previousStatePrediction = openSeq[i - 1],
-                actualCloseFamilySequence = closeSeq[i],
-                closeGlobalModePrediction = closeGlobalMode,
-                closeWeekdayModePrediction = if (closeWeekdayHistory.isEmpty()) closeGlobalMode else mode(closeWeekdayHistory),
-                closePreviousStatePrediction = closeSeq[i - 1]
-            )
+        // Maintain only the strictly-prior history needed for each walk-forward row.
+        // This avoids repeatedly copying/scanning every prefix of the chart.
+        val openCounts = mutableMapOf<String, Int>()
+        val closeCounts = mutableMapOf<String, Int>()
+        val openWeekdayCounts = mutableMapOf<java.time.DayOfWeek, MutableMap<String, Int>>()
+        val closeWeekdayCounts = mutableMapOf<java.time.DayOfWeek, MutableMap<String, Int>>()
+        fun add(counts: MutableMap<String, Int>, value: String) {
+            counts[value] = (counts[value] ?: 0) + 1
+        }
+        fun modeOf(counts: Map<String, Int>): String =
+            counts.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .first().key
+        for (i in accepted.indices) {
+            val day = accepted[i].date.dayOfWeek
+            if (i > 0) {
+                val openGlobalMode = modeOf(openCounts)
+                val closeGlobalMode = modeOf(closeCounts)
+                val openDayCounts = openWeekdayCounts[day].orEmpty()
+                val closeDayCounts = closeWeekdayCounts[day].orEmpty()
+                rows += WalkForwardRow(
+                    date = accepted[i].date,
+                    actualOpenFamilySequence = openSeq[i],
+                    globalModePrediction = openGlobalMode,
+                    weekdayModePrediction = if (openDayCounts.isEmpty()) openGlobalMode else modeOf(openDayCounts),
+                    previousStatePrediction = openSeq[i - 1],
+                    actualCloseFamilySequence = closeSeq[i],
+                    closeGlobalModePrediction = closeGlobalMode,
+                    closeWeekdayModePrediction = if (closeDayCounts.isEmpty()) closeGlobalMode else modeOf(closeDayCounts),
+                    closePreviousStatePrediction = closeSeq[i - 1]
+                )
+            }
+            // Add today's values only after evaluating today's prediction.
+            add(openCounts, openSeq[i])
+            add(closeCounts, closeSeq[i])
+            add(openWeekdayCounts.getOrPut(day) { mutableMapOf() }, openSeq[i])
+            add(closeWeekdayCounts.getOrPut(day) { mutableMapOf() }, closeSeq[i])
         }
         fun openMetric(selector: (WalkForwardRow) -> String) =
             WalkForwardMetric(rows.count { selector(it) == it.actualOpenFamilySequence }, rows.size)
