@@ -75,6 +75,54 @@ class PredictionLearningCycleTest {
         assertNull(performance.hitRate)
     }
 
+    @Test fun greyPredictionRechecksWhenHistoricalPublisherEvidenceChangesToConsensus() {
+        val target = LocalDate.of(2026, 10, 9)
+        val (ledger, prediction) = PredictionLearningCycle.lock(
+            history(), Market.SRIDEVI, "main", target, PannaSide.OPEN, locked,
+            limit = 10, minimumHistory = 5
+        )
+        val firstPublisher = observation(target, "publisher-a", result("123", "456"))
+        val (afterGrey, firstAttempt) = PredictionLearningCycle.verify(
+            ledger, prediction.id, listOf(firstPublisher), verified
+        )
+        assertEquals(PredictionGrade.GREY, firstAttempt.grade)
+        assertFalse(PredictionLearningCycle.needsReverification(afterGrey, prediction.id, listOf(firstPublisher)))
+
+        // This second publisher row was imported later, but its original capture timestamp is older.
+        val historicalSecondPublisher = observation(target, "publisher-b", firstPublisher.normalizedResult!!)
+            .copy(retrievedAt = retrieved.minusSeconds(3600))
+        val updatedEvidence = listOf(firstPublisher, historicalSecondPublisher)
+        assertTrue(PredictionLearningCycle.needsReverification(afterGrey, prediction.id, updatedEvidence))
+
+        val (afterConsensus, secondAttempt) = PredictionLearningCycle.verify(
+            afterGrey, prediction.id, updatedEvidence, verified.plusSeconds(60)
+        )
+        assertEquals(PredictionGrade.GREEN, secondAttempt.grade)
+        assertEquals(2, secondAttempt.attempt)
+        assertEquals(2, afterConsensus.verifications.size)
+        assertEquals(PredictionGrade.GREY, afterConsensus.verifications.first().grade)
+        assertEquals(PredictionGrade.GREEN, afterConsensus.verifications.last().grade)
+    }
+
+    @Test fun terminalPredictionGradesAreNotRecheckedAfterLaterEvidenceChanges() {
+        val target = LocalDate.of(2026, 10, 9)
+        val (ledger, prediction) = PredictionLearningCycle.lock(
+            history(), Market.SRIDEVI, "main", target, PannaSide.OPEN, locked,
+            limit = 10, minimumHistory = 5
+        )
+        val agreed = result(prediction.candidates.first(), "456")
+        val consensus = listOf(
+            observation(target, "publisher-a", agreed),
+            observation(target, "publisher-b", agreed)
+        )
+        val (verifiedLedger, verification) = PredictionLearningCycle.verify(
+            ledger, prediction.id, consensus, verified
+        )
+        assertEquals(PredictionGrade.GREEN, verification.grade)
+        val changed = consensus + observation(target, "publisher-c", result("678", "901"))
+        assertFalse(PredictionLearningCycle.needsReverification(verifiedLedger, prediction.id, changed))
+    }
+
     @Test fun predictionCannotBeReplacedOrCreatedAfterTargetResultExists() {
         val target = LocalDate.of(2026, 10, 9)
         val (ledger, prediction) = PredictionLearningCycle.lock(
