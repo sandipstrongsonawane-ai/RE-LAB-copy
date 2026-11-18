@@ -175,8 +175,8 @@ object SangamWalkForwardEvaluator {
             val sangam = SangamCandidateEngine.derive(open.candidates, close.candidates, topN)
             val actualOpenAnk = actual.openPanna.sumOf { it.digitToInt() } % 10
             val actualCloseAnk = actual.closePanna.sumOf { it.digitToInt() } % 10
-            val actualHalf = setOf("\${actual.openPanna}-\${actualCloseAnk}", "\${actualOpenAnk}-\${actual.closePanna}")
-            val actualFull = "\${actual.openPanna}-\${actual.closePanna}"
+            val actualHalf = setOf("${actual.openPanna}-${actualCloseAnk}", "${actualOpenAnk}-${actual.closePanna}")
+            val actualFull = "${actual.openPanna}-${actual.closePanna}"
             val halfRanks = sangam.halfSangam.map { it.label }
             val fullRanks = sangam.fullSangam.map { it.label }
             evaluated++
@@ -190,8 +190,8 @@ object SangamWalkForwardEvaluator {
 
         val insufficient = targets.size - evaluated
         val warning = when {
-            evaluated == 0 -> "No target dates had \${minimumHistory} strictly earlier eligible records. No hit rate is available."
-            evaluated < 30 -> "Low sample: only \${evaluated} historical target dates were evaluated. Rates are descriptive and unstable."
+            evaluated == 0 -> "No target dates had ${minimumHistory} strictly earlier eligible records. No hit rate is available."
+            evaluated < 30 -> "Low sample: only ${evaluated} historical target dates were evaluated. Rates are descriptive and unstable."
             allowSingleSourceExploration -> "Exploratory single-publisher backtest. Not independently verified; no future probability is implied."
             else -> "Consensus-only historical backtest. Past hit rates do not imply future probability or guarantee."
         }
