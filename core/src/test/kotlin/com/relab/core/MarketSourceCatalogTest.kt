@@ -54,10 +54,14 @@ class MarketSourceCatalogTest {
 
     @Test fun livesattamatkaNetArchivesAreEnabledButSharePublisherIdentity() {
         val netSources = MarketSourceCatalog.sources.filter { it.url.contains("livesattamatka.net") }
-        assertEquals(4, netSources.size)
+        assertEquals(9, netSources.size)
         assertTrue(netSources.all { it.enabled && it.sourceId == "livesattamatka" })
         assertEquals(
-            setOf(Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.valueOf("PUNA_BAZAR")),
+            setOf(
+                Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.valueOf("PUNA_BAZAR"),
+                Market.TIME_BAZAR, Market.MAIN_BAZAR, Market.MAIN_BAZAR_NIGHT,
+                Market.TIME_BAZAR_DAY, Market.NEW_TIME_BAZAR
+            ),
             netSources.map { it.market }.toSet()
         )
     }
