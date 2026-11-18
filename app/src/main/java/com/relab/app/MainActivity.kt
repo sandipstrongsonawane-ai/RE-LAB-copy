@@ -290,90 +290,41 @@ private fun RelabHome(
         if (currentLedger != predictionLedger) predictionLedger = currentLedger
     }
 
+    var dashboardAnalytics by remember { mutableStateOf<DashboardAnalytics?>(null) }
+    var analyticsBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(observations, coverageRangeOverrides) {
+        val snapshot = observations
+        val ranges = coverageRangeOverrides
+        dashboardAnalytics = null
+        analyticsBusy = true
+        try {
+            dashboardAnalytics = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                DashboardAnalytics.compute(snapshot, ranges)
+            }
+        } catch (error: Exception) {
+            importMessage = "Research analysis failed: ${error.message ?: "Unknown error"}"
+        } finally {
+            analyticsBusy = false
+        }
+    }
+
     val report = remember(rawCsv) { rawCsv?.let { SourceCsvImporter.import(it) } }
-    val groups = remember(observations) { SourceReconciliation.reconcile(observations) }
+    val groups = dashboardAnalytics?.groups.orEmpty()
     val conflicts = groups.count { it.state == ReconciliationState.CONFLICT }
-    val repeatedSourceRecords = remember(observations) {
-        SourceObservationMerger.auditRepeatedSourceRecords(observations)
-    }
-    val repeatedPublishedResults = remember(observations) {
-        SourceObservationMerger.auditRepeatedPublishedResultsAcrossDates(observations)
-    }
+    val repeatedSourceRecords = dashboardAnalytics?.repeatedSourceRecords.orEmpty()
+    val repeatedPublishedResults = dashboardAnalytics?.repeatedPublishedResults.orEmpty()
     val published = observations.count { it.status == ObservationStatus.PUBLISHED }
     val pending = observations.count { it.status == ObservationStatus.PENDING }
     val malformed = observations.count { it.status == ObservationStatus.MALFORMED }
-    val chartBuild = remember(observations) { ReconciledChartBuilder.build(observations) }
+    val chartBuild = dashboardAnalytics?.chartBuild ?: com.relab.core.ChartBuildReport(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
     // Exploratory records include valid single-publisher rows, but remain visibly
     // unverified; the consensus ledger and reconciliation counts stay unchanged.
-    val researchRecords = remember(observations) {
-        ReconciledChartBuilder.buildExploratoryRecords(observations)
-    }
-    val patternAnalyses = remember(researchRecords) { PatternAnalysis.analyze(researchRecords) }
-    val intelligenceReports = remember(researchRecords) { com.relab.core.MarketIntelligence.analyze(researchRecords) }
-    val candidateSets = remember(observations) {
-        researchRecords.map { it.market to it.sessionId }.distinct().map { (market, sessionId) ->
-            val target = LocalDate.now()
-            val open = com.relab.core.CandidateRankingEngine.rank(
-                observations, market, sessionId, target, com.relab.core.PannaSide.OPEN,
-                limit = 10, minimumHistory = 5, allowSingleSourceExploration = true
-            )
-            val close = com.relab.core.CandidateRankingEngine.rank(
-                observations, market, sessionId, target, com.relab.core.PannaSide.CLOSE,
-                limit = 10, minimumHistory = 5, allowSingleSourceExploration = true
-            )
-            Triple(
-                open,
-                close,
-                com.relab.core.CandidateRankingEngine.deriveJodiCandidates(
-                    open.candidates, close.candidates, limit = 10
-                )
-            )
-        }
-    }
-    val selfLearningReports = remember(chartBuild.records) {
-        chartBuild.records.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
-            listOf(
-                com.relab.core.SelfLearningHypothesisEngine.discover(
-                    chartBuild.records, market, sessionId, com.relab.core.HypothesisSide.OPEN,
-                    minimumHistory = 8, minimumSupport = 3
-                ),
-                com.relab.core.SelfLearningHypothesisEngine.discover(
-                    chartBuild.records, market, sessionId, com.relab.core.HypothesisSide.CLOSE,
-                    minimumHistory = 8, minimumSupport = 3
-                )
-            )
-        }
-    }
-    var candidateWalkForwardReports by remember {
-        mutableStateOf<List<com.relab.core.CandidateWalkForwardReport>>(emptyList())
-    }
-    LaunchedEffect(observations) {
-        val snapshot = observations
-        val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val records = ReconciledChartBuilder.buildExploratoryRecords(snapshot)
-            records.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
-                listOf(
-                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                        snapshot, market, sessionId, com.relab.core.PannaSide.OPEN,
-                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
-                    ),
-                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                        snapshot, market, sessionId, com.relab.core.PannaSide.CLOSE,
-                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
-                    ),
-                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                        snapshot, market, sessionId, com.relab.core.PannaSide.OPEN,
-                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
-                    ),
-                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                        snapshot, market, sessionId, com.relab.core.PannaSide.CLOSE,
-                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
-                    )
-                )
-            }
-        }
-        candidateWalkForwardReports = result
-    }
+    val researchRecords = dashboardAnalytics?.researchRecords.orEmpty()
+    val patternAnalyses = dashboardAnalytics?.patternAnalyses.orEmpty()
+    val intelligenceReports = dashboardAnalytics?.intelligenceReports.orEmpty()
+    val candidateSets = dashboardAnalytics?.candidateSets.orEmpty()
+    val selfLearningReports = dashboardAnalytics?.selfLearningReports.orEmpty()
+    val candidateWalkForwardReports = dashboardAnalytics?.candidateWalkForwardReports.orEmpty()
     val researchExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) {
             try {
@@ -416,22 +367,9 @@ private fun RelabHome(
     }
 
     var coverageRangeOverrides by remember { mutableStateOf(initialCoverageRanges) }
-    val coverageReports = remember(observations, coverageRangeOverrides) {
-        observations.groupBy { it.market to it.sessionId }
-            .mapNotNull { (key, rows) ->
-                val dates = rows.map { it.date }
-                if (dates.isEmpty()) null else HistoricalCoverageAudit.analyze(
-                    market = key.first,
-                    sessionId = key.second,
-                    startDate = coverageRangeOverrides["${key.first.name}:${key.second}"]?.first ?: dates.minOrNull()!!,
-                    endDate = coverageRangeOverrides["${key.first.name}:${key.second}"]?.second ?: dates.maxOrNull()!!,
-                    observations = rows
-                )
-            }
-            .sortedWith(compareBy<CoverageReport> { it.market.name }.thenBy { it.sessionId })
-    }
+    val coverageReports = dashboardAnalytics?.coverageReports.orEmpty()
 
-    val sourceTiming = remember(observations) { SourceTimingAnalytics.summarize(observations) }
+    val sourceTiming = dashboardAnalytics?.sourceTiming.orEmpty()
     val timingExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) {
             try {
