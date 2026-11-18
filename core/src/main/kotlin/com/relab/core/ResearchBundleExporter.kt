@@ -16,13 +16,15 @@ object ResearchBundleExporter {
         coverageReports: List<CoverageReport>,
         generatedAt: Instant,
         predictionLedger: PredictionLearningLedger = PredictionLearningLedger(),
-        crossMarketReport: CrossMarketReverseEngineeringReport? = null
+        crossMarketReport: CrossMarketReverseEngineeringReport? = null,
+        candidateWalkForwardReports: List<CandidateWalkForwardReport> = emptyList()
     ): ByteArray {
         val artifacts = linkedMapOf(
             "source-observations.csv" to SourceCsvExporter.export(observations),
             "derived-consensus-research.csv" to DerivedChartCsvExporter.export(consensusRecords),
             "walk-forward-audit.csv" to WalkForwardCsvExporter.export(analyses),
             "cross-market-associations.csv" to CrossMarketAssociationCsvExporter.export(crossMarketReport),
+            "candidate-walk-forward-audit.csv" to CandidateWalkForwardCsvExporter.export(candidateWalkForwardReports),
             "historical-coverage-audit.csv" to CoverageCsvExporter.export(coverageReports),
             "source-publication-timing.csv" to SourceTimingAnalytics.exportCsv(observations),
             "prediction-learning-ledger.csv" to PredictionLedgerCsvCodec.export(predictionLedger),
@@ -74,6 +76,7 @@ object ResearchBundleExporter {
         appendLine("- derived-consensus-research.csv: validated multi-source consensus records only")
         appendLine("- walk-forward-audit.csv: chronological out-of-sample baseline audit")
         appendLine("- cross-market-associations.csv: dated market/session associations with lag, overlap, mutual information and adjusted p-value")
+        appendLine("- candidate-walk-forward-audit.csv: chronological strict-consensus and explicitly exploratory baseline/learning metrics")
         appendLine("- historical-coverage-audit.csv: expected-day coverage states")
         appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")
         appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")
@@ -83,6 +86,7 @@ object ResearchBundleExporter {
         appendLine("Important: single-source and conflicting records are retained in the source ledger but excluded from consensus research.")
         appendLine("Missing source rows are not evidence of a holiday. Publication times are never inferred.")
         appendLine("Cross-market associations are exploratory correlations, not proof of common control, causation, or future outcomes.")
+        appendLine("Candidate walk-forward scoring uses only strictly earlier chart records and verified feedback available before each target-day UTC midnight.")
         appendLine("Walk-forward outputs are historical baseline evaluations, not guaranteed predictions.")
     }
 
