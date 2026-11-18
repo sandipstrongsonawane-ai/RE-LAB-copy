@@ -1125,9 +1125,9 @@ private fun MarketNextInsightCard(
     }
     val openDigit = top(features.map { it.openAnk.toString() }, features.size)
     val jodiPattern = top(features.map { "${it.openAnk}${it.closeAnk}" }, features.size)
-    val halfOpen = top(features.map { "${it.openPanna}-${it.closeAnk}" }, features.size)
-    val halfClose = top(features.map { "${it.openAnk}-${it.closePanna}" }, features.size)
-    val fullSangam = top(features.map { "${it.openPanna}-${it.closePanna}" }, features.size)
+    val halfOpen = top(valid.map { (record, feature) -> "${record.openPanna}-${feature.closeAnk}" }, valid.size)
+    val halfClose = top(valid.map { (record, feature) -> "${feature.openAnk}-${record.closePanna}" }, valid.size)
+    val fullSangam = top(valid.map { (record, _) -> "${record.openPanna}-${record.closePanna}" }, valid.size)
     val pannaTypes = valid.flatMap { listOf(it.first.openPanna to it.second.openType, it.first.closePanna to it.second.closeType) }
     val doublePannas = pannaTypes.filter { (_, type) -> type.name.contains("DOUBLE") || type.name == "DP" }.map { it.first }
     val triplePannas = pannaTypes.filter { (_, type) -> type.name.contains("TRIPLE") || type.name == "TP" }.map { it.first }
