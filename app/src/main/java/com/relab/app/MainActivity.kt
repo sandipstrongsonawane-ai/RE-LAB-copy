@@ -290,6 +290,7 @@ private fun RelabHome(
         if (currentLedger != predictionLedger) predictionLedger = currentLedger
     }
 
+    var coverageRangeOverrides by remember { mutableStateOf(initialCoverageRanges) }
     var dashboardAnalytics by remember { mutableStateOf<DashboardAnalytics?>(null) }
     var analyticsBusy by remember { mutableStateOf(false) }
     LaunchedEffect(observations, coverageRangeOverrides) {
@@ -366,7 +367,6 @@ private fun RelabHome(
         }
     }
 
-    var coverageRangeOverrides by remember { mutableStateOf(initialCoverageRanges) }
     val coverageReports = dashboardAnalytics?.coverageReports.orEmpty()
 
     val sourceTiming = dashboardAnalytics?.sourceTiming.orEmpty()
