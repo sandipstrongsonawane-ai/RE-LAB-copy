@@ -233,6 +233,7 @@ private fun RelabHome(
     var uiLanguage by remember { mutableStateOf(languagePreferences.getString("ui_language", "hinglish") ?: "hinglish") }
     var activeSection by remember { mutableStateOf("home") }
     var showLedgerDetails by remember { mutableStateOf(false) }
+    var showDatasetDetails by remember { mutableStateOf(false) }
     var rawCsv by remember { mutableStateOf(initialCsv) }
     var observations by remember { mutableStateOf(initialObservations) }
     var predictionLedger by remember { mutableStateOf(initialPredictionLedger) }
@@ -778,27 +779,32 @@ private fun RelabHome(
                 Card(colors = CardDefaults.cardColors()) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(uiText(uiLanguage, "Local dataset", "लोकल डेटा", "स्थानिक डेटा"), style = MaterialTheme.typography.titleLarge)
-                        Text("Source observations: ${observations.size}")
-                        Text("Published: $published   Pending: $pending")
-                        Text("Malformed rows: $malformed   Conflicting dates: $conflicts")
-                        Text("Reconciled date groups: ${groups.size}")
-                        if (report == null) {
-                            Text("No CSV imported yet. Import a source CSV to begin historical research.")
-                            Text(
-                                "Required columns: market, session_id, date, source_id, retrieved_at, raw_text, status. " +
-                                    "For a published result, include the result column too.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        if (report != null && report.issues.isNotEmpty()) {
-                            Text("Import row issues: ${report.issues.size}")
-                            report.issues.take(5).forEach { issue ->
-                                Text("Row ${issue.rowNumber}: ${issue.message}", style = MaterialTheme.typography.bodySmall)
+                        Text(uiText(uiLanguage, "Records: ${observations.size}", "कुल रिकॉर्ड: ${observations.size}", "एकूण नोंदी: ${observations.size}"))
+                        Text(uiText(uiLanguage, "Published: $published · Pending: $pending", "प्रकाशित: $published · बाकी: $pending", "प्रकाशित: $published · प्रलंबित: $pending"))
+                        if (showDatasetDetails) {
+                            Text(uiText(uiLanguage, "Malformed rows: $malformed · Conflicting dates: $conflicts", "गलत पंक्तियां: $malformed · विरोधी तारीखें: $conflicts", "अवैध ओळी: $malformed · विसंगत तारखा: $conflicts"))
+                            Text(uiText(uiLanguage, "Reconciled date groups: ${groups.size}", "मिलाई गई तारीखें: ${groups.size}", "जुळवलेले तारीख गट: ${groups.size}"))
+                            if (report == null) {
+                                Text(uiText(uiLanguage, "No CSV imported yet. Open Backup to import a source CSV.", "अभी CSV इम्पोर्ट नहीं हुई। सोर्स CSV के लिए Backup खोलें।", "अजून CSV आयात केलेली नाही. स्रोत CSV साठी Backup उघडा."))
+                                Text(
+                                    "Required columns: market, session_id, date, source_id, retrieved_at, raw_text, status. " +
+                                        "For a published result, include the result column too.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
+                            if (report != null && report.issues.isNotEmpty()) {
+                                Text(uiText(uiLanguage, "Import row issues: ${report.issues.size}", "इम्पोर्ट पंक्ति समस्याएं: ${report.issues.size}", "आयात ओळीतील समस्या: ${report.issues.size}"))
+                                report.issues.take(5).forEach { issue ->
+                                    Text("Row ${issue.rowNumber}: ${issue.message}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                        OutlinedButton(onClick = { showDatasetDetails = !showDatasetDetails }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (showDatasetDetails) uiText(uiLanguage, "Hide data details", "डेटा विवरण छिपाएं", "डेटा तपशील लपवा") else uiText(uiLanguage, "Show data details", "डेटा विवरण देखें", "डेटा तपशील पहा"))
                         }
                     }
                 }
-                if (analyticsBusy) Text("Updating historical analytics in background…", style = MaterialTheme.typography.bodySmall)
+                if (analyticsBusy) Text(uiText(uiLanguage, "Updating historical analytics in background…", "पुराने डेटा का विश्लेषण चल रहा है…", "ऐतिहासिक डेटाचे विश्लेषण सुरू आहे…"), style = MaterialTheme.typography.bodySmall)
                 }
                 if (activeSection == "research") {
                 Text(uiText(uiLanguage, "Pattern research · exploratory + verified", "पैटर्न रिसर्च · खोज + सत्यापन", "पॅटर्न संशोधन · शोध + पडताळणी"), style = MaterialTheme.typography.titleLarge)
