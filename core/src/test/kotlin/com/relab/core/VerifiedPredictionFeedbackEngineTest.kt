@@ -19,7 +19,7 @@ class VerifiedPredictionFeedbackEngineTest {
         attempt: Int = 1
     ) = PredictionVerification(
         prediction.id, grade, actual, null, null,
-        Instant.parse("2026-11-18T00:00:00Z"),
+        prediction.targetDate.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant(),
         if (grade == PredictionGrade.GREY) ReconciliationState.SINGLE_SOURCE_UNVERIFIED else ReconciliationState.CONSENSUS,
         "test", attempt
     )
@@ -96,6 +96,27 @@ class VerifiedPredictionFeedbackEngineTest {
         assertEquals(1, learnedCandidate.verifiedFeedbackExposure)
         assertTrue(learnedCandidate.score > baseCandidate.score)
         assertTrue(learnedCandidate.score - baseCandidate.score <= 5.0)
+    }
+
+
+    @Test fun excludesOutcomesVerifiedOnOrAfterTheTargetDateToPreventTemporalLeakage() {
+        val prior = prediction("2026-10-01", PannaSide.OPEN, listOf("123"))
+        val sameDay = verification(prior, PredictionGrade.GREEN, "678").copy(
+            verifiedAt = Instant.parse("2026-11-08T00:00:00Z")
+        )
+        val nextDay = verification(prior, PredictionGrade.GREEN, "678").copy(
+            verifiedAt = Instant.parse("2026-11-09T00:00:00Z")
+        )
+        val sameDayReport = VerifiedPredictionFeedbackEngine.analyze(
+            PredictionLearningLedger(listOf(prior), listOf(sameDay)),
+            Market.SRIDEVI, "main", LocalDate.parse("2026-11-08"), PannaSide.OPEN
+        )
+        assertEquals(0, sameDayReport.verifiedPredictions)
+        val nextDayReport = VerifiedPredictionFeedbackEngine.analyze(
+            PredictionLearningLedger(listOf(prior), listOf(nextDay)),
+            Market.SRIDEVI, "main", LocalDate.parse("2026-11-10"), PannaSide.OPEN
+        )
+        assertEquals(1, nextDayReport.verifiedPredictions)
     }
 
     @Test fun marketSessionAndSideRemainIsolated() {
