@@ -103,7 +103,7 @@ class PredictionLearningCycleTest {
         assertEquals(prediction.id, ledger.lockedPredictions.single().id)
     }
 
-    @Test fun verificationIsImmutableAndCannotBeRepeated() {
+    @Test fun greyVerificationCanBeRecheckedWithoutRewritingPriorAttempt() {
         val target = LocalDate.of(2026, 10, 9)
         val (ledger, prediction) = PredictionLearningCycle.lock(
             history(), Market.SRIDEVI, "main", target, PannaSide.OPEN, locked,
@@ -114,11 +114,13 @@ class PredictionLearningCycleTest {
             observation(target, "publisher-b", result("123", "456"))
         )
         val (after, _) = PredictionLearningCycle.verify(ledger, prediction.id, outcomes, verified)
-        try {
-            PredictionLearningCycle.verify(after, prediction.id, outcomes, verified)
-            fail("Expected repeated verification rejection")
-        } catch (expected: IllegalArgumentException) {
-            assertTrue(expected.message.orEmpty().contains("already verified"))
-        }
+        val (rechecked, second) = PredictionLearningCycle.verify(
+            after, prediction.id, outcomes, verified.plusSeconds(60)
+        )
+        assertEquals(2, second.attempt)
+        assertEquals(2, rechecked.verifications.size)
+        assertEquals(1, rechecked.performance(Market.SRIDEVI, "main", PannaSide.OPEN).green)
+        assertEquals(1, after.verifications.size)
+        assertEquals(1, after.verifications.single().attempt)
     }
 }
