@@ -26,11 +26,16 @@ class Market private constructor(
         val MILAN_DAY = Market("MILAN_DAY", allDays)
         val KALYAN_MORNING = Market("KALYAN_MORNING", allDays)
         val KALYAN_NIGHT = Market("KALYAN_NIGHT", allDays)
+        val TIME_BAZAR = Market("TIME_BAZAR", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
+        val TIME_BAZAR_DAY = Market("TIME_BAZAR_DAY", allDays)
+        val NEW_TIME_BAZAR = Market("NEW_TIME_BAZAR", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
+        val MAIN_BAZAR_NIGHT = Market("MAIN_BAZAR_NIGHT", allDays)
 
         /** Known built-in markets for legacy UI compatibility; valueOf also resolves new names. */
         val entries: List<Market> = listOf(
             SRIDEVI, SRIDEVI_NIGHT, KALYAN, TIME_BAZAR, MAIN_BAZAR,
-            MILAN_DAY, KALYAN_MORNING, KALYAN_NIGHT
+            MILAN_DAY, KALYAN_MORNING, KALYAN_NIGHT,
+            TIME_BAZAR, TIME_BAZAR_DAY, NEW_TIME_BAZAR, MAIN_BAZAR_NIGHT
         )
 
         fun values(): Array<Market> = entries.toTypedArray()
