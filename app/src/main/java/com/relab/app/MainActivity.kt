@@ -1116,7 +1116,7 @@ private fun MarketNextInsightCard(
         if (values.isEmpty() || denominator == 0) return "Insufficient history"
         val (pattern, count) = values.groupingBy { it }.eachCount().entries
             .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).first()
-        return "$pattern · \${"%.1f".format(count * 100.0 / denominator)}% (n=$count/$denominator)"
+        return "$pattern · ${"%.1f".format(count * 100.0 / denominator)}% (n=$count/$denominator)"
     }
     fun nextActiveDate(): LocalDate {
         var date = LocalDate.now().plusDays(1)
@@ -1124,10 +1124,10 @@ private fun MarketNextInsightCard(
         return LocalDate.now().plusDays(1)
     }
     val openDigit = top(features.map { it.openAnk.toString() }, features.size)
-    val jodiPattern = top(features.map { "\${it.openAnk}\${it.closeAnk}" }, features.size)
-    val halfOpen = top(features.map { "\${it.openPanna}-\${it.closeAnk}" }, features.size)
-    val halfClose = top(features.map { "\${it.openAnk}-\${it.closePanna}" }, features.size)
-    val fullSangam = top(features.map { "\${it.openPanna}-\${it.closePanna}" }, features.size)
+    val jodiPattern = top(features.map { "${it.openAnk}${it.closeAnk}" }, features.size)
+    val halfOpen = top(features.map { "${it.openPanna}-${it.closeAnk}" }, features.size)
+    val halfClose = top(features.map { "${it.openAnk}-${it.closePanna}" }, features.size)
+    val fullSangam = top(features.map { "${it.openPanna}-${it.closePanna}" }, features.size)
     val pannaTypes = valid.flatMap { listOf(it.first.openPanna to it.second.openType, it.first.closePanna to it.second.closeType) }
     val doublePannas = pannaTypes.filter { (_, type) -> type.name.contains("DOUBLE") || type.name == "DP" }.map { it.first }
     val triplePannas = pannaTypes.filter { (_, type) -> type.name.contains("TRIPLE") || type.name == "TP" }.map { it.first }
@@ -1135,12 +1135,12 @@ private fun MarketNextInsightCard(
     val ageHours = latestRetrievedAt?.let { java.time.Duration.between(it, java.time.Instant.now()).toHours().coerceAtLeast(0) } ?: Long.MAX_VALUE
     val freshnessLabel = when {
         latestRetrievedAt == null -> "NO SOURCE FETCH"
-        ageHours >= 72 -> "STALE · \${ageHours}h"
-        ageHours >= 24 -> "AGING · \${ageHours}h"
-        else -> "RECENT · \${ageHours}h"
+        ageHours >= 72 -> "STALE · ${ageHours}h"
+        ageHours >= 24 -> "AGING · ${ageHours}h"
+        else -> "RECENT · ${ageHours}h"
     }
     val freshnessColor = when {
-        latestRetrievedAt == null || ageHours!! >= 72 -> MaterialTheme.colorScheme.error
+        latestRetrievedAt == null || ageHours >= 72 -> MaterialTheme.colorScheme.error
         ageHours >= 24 -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.primary
     }
@@ -1150,8 +1150,8 @@ private fun MarketNextInsightCard(
                 Text("$market · $sessionId", style = MaterialTheme.typography.titleMedium)
                 Text(freshnessLabel, color = freshnessColor, style = MaterialTheme.typography.labelSmall)
             }
-            Text("Next active date: \${nextActiveDate()} · History: \${features.size} valid rows")
-            Text("Latest result: \${latestResultDate ?: "—"} · Last source fetch: \${latestRetrievedAt ?: "Never"}", style = MaterialTheme.typography.bodySmall)
+            Text("Next active date: ${nextActiveDate()} · History: ${features.size} valid rows")
+            Text("Latest result: ${latestResultDate ?: "—"} · Last source fetch: ${latestRetrievedAt ?: "Never"}", style = MaterialTheme.typography.bodySmall)
             androidx.compose.material3.HorizontalDivider()
             Text("OPEN DIGIT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(openDigit)
             Text("JODI · historical open/close ank pair", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(jodiPattern)
@@ -1162,9 +1162,9 @@ private fun MarketNextInsightCard(
             Text("FULL SANGAM · exact open/close panna pair", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(fullSangam)
             if (open != null && close != null && !open.abstained && !close.abstained) {
                 Text("Next research candidates · relative evidence index (not probability)", style = MaterialTheme.typography.titleSmall)
-                Text("Open: \${open.candidates.take(3).joinToString { "\${it.panna} (\${"%.1f".format(it.score)})" }}")
-                Text("Close: \${close.candidates.take(3).joinToString { "\${it.panna} (\${"%.1f".format(it.score)})" }}")
-                Text("Jodi rank: \${jodi.take(3).joinToString { "\${it.jodi} (\${"%.1f".format(it.score)})" }}")
+                Text("Open: ${open.candidates.take(3).joinToString { "${it.panna} (${"%.1f".format(it.score)})" }}")
+                Text("Close: ${close.candidates.take(3).joinToString { "${it.panna} (${"%.1f".format(it.score)})" }}")
+                Text("Jodi rank: ${jodi.take(3).joinToString { "${it.jodi} (${"%.1f".format(it.score)})" }}")
             } else Text(open?.note ?: "Candidate ranking unavailable until source history arrives.", style = MaterialTheme.typography.bodySmall)
             Text("Historical share = matching rows ÷ eligible rows. Descriptive evidence only, not a calibrated future chance. See Research and Audit for backtests, missing dates, publisher coverage and conflicts.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
