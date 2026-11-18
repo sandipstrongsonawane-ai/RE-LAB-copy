@@ -114,6 +114,31 @@ object MarketSourceCatalog {
             note = "Verified weekly panel archive; Monday-Saturday calendar and distinct market identity."
         ),
         MarketSource(
+            Market.CB, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/cb", "weekly-panel",
+            note = "Verified weekly panel archive; seven-day market."
+        ),
+        MarketSource(
+            Market.MAIN_RATAN, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/main-ratan", "weekly-panel",
+            note = "Verified weekly panel archive; Monday-Friday market."
+        ),
+        MarketSource(
+            Market.SUNDAY_BAZAR, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/sunday-bazar", "weekly-panel",
+            note = "Verified weekly panel archive; seven-day market."
+        ),
+        MarketSource(
+            Market.GEETA_MORNING, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/geeta-morning", "weekly-panel",
+            note = "Verified weekly panel archive; seven-day market."
+        ),
+        MarketSource(
+            Market.MAIN_BAZAR_MORNING, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/main-bazar-morning", "weekly-panel",
+            note = "Verified weekly panel archive; distinct morning market identity."
+        ),
+        MarketSource(
             Market.KALYAN, "main", "kalyanchart",
             "https://kalyanchart.cyou/history/", "archive",
             enabled = false,
