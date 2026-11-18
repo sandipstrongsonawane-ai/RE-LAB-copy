@@ -785,7 +785,7 @@ private fun RelabHome(
                     Text("Add a chart URL to start tracking date-wise coverage for each publisher URL.")
                 } else {
                     publisherCoverageReports.forEach { coverage ->
-                        PublisherCoverageReportCard(coverage)
+                        PublisherCoverageReportCard(coverage, sourceStatuses)
                     }
                 }
                 Text("Repeated source-record audit", style = MaterialTheme.typography.titleLarge)
@@ -881,7 +881,10 @@ private fun CandidateWalkForwardCard(report: com.relab.core.CandidateWalkForward
 
 
 @Composable
-private fun PublisherCoverageReportCard(report: com.relab.core.PublisherCoverageReport) {
+private fun PublisherCoverageReportCard(
+    report: com.relab.core.PublisherCoverageReport,
+    sourceStatuses: Map<String, String>
+) {
     val byUrl = report.days.groupBy { it.sourceId to it.sourceUrl }
     Card {
         Column(
@@ -904,6 +907,10 @@ private fun PublisherCoverageReportCard(report: com.relab.core.PublisherCoverage
                 }
                 Text("${identity.first} · ${published}/${days.size} dates published", style = MaterialTheme.typography.titleSmall)
                 Text(identity.second, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    sourceStatuses[identity.second]?.let { "Last refresh: $it" } ?: "Last refresh: not attempted yet",
+                    style = MaterialTheme.typography.labelSmall
+                )
                 Text(label, style = MaterialTheme.typography.bodySmall)
                 days.filter { it.state != com.relab.core.PublisherDateState.PUBLISHED }
                     .takeLast(6).asReversed().forEach { day ->
