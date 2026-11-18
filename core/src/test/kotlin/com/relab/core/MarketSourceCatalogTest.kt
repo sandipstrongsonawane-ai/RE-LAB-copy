@@ -7,8 +7,8 @@ class MarketSourceCatalogTest {
     @Test fun hasIndependentSrideviAndKalyanSourceSets() {
         val sridevi = MarketSourceCatalog.enabledFor(Market.SRIDEVI)
         val kalyan = MarketSourceCatalog.enabledFor(Market.KALYAN)
-        assertEquals(4, sridevi.size)
-        assertEquals(3, kalyan.size)
+        assertEquals(5, sridevi.size)
+        assertEquals(4, kalyan.size)
         assertTrue(sridevi.all { it.market == Market.SRIDEVI && it.sessionId == "main" })
         assertTrue(kalyan.all { it.market == Market.KALYAN && it.sessionId == "main" })
         assertFalse(sridevi.any { it in kalyan })
@@ -38,7 +38,7 @@ class MarketSourceCatalogTest {
         )
         assertEquals(
             "https://matkaflash.com/milan-day/panel-chart",
-            MarketSourceCatalog.enabledFor(Market.MILAN_DAY).single().url
+            MarketSourceCatalog.enabledFor(Market.MILAN_DAY).single { it.sourceId == "matkaflash" }.url
         )
     }
 
@@ -108,6 +108,23 @@ class MarketSourceCatalogTest {
         }
         assertTrue(Market.MAIN_RATAN.activeDays.none { it == java.time.DayOfWeek.SATURDAY || it == java.time.DayOfWeek.SUNDAY })
         assertNotEquals(Market.MAIN_BAZAR, Market.MAIN_BAZAR_MORNING)
+    }
+
+    @Test fun addsFixtureBackedSattaMatkaiPanelSourcesWithoutMixingSessions() {
+        val expected = mapOf(
+            Market.SRIDEVI to "https://sattamatkai.in/panel-chart-record/sridevi",
+            Market.KALYAN to "https://sattamatkai.in/panel-chart-record/kalyan",
+            Market.TIME_BAZAR to "https://sattamatkai.in/panel-chart-record/time-bazar",
+            Market.MILAN_DAY to "https://sattamatkai.in/panel-chart-record/milan-day"
+        )
+        expected.forEach { (market, url) ->
+            val source = MarketSourceCatalog.enabledFor(market).single { it.sourceId == "sattamatkai" }
+            assertEquals(url, source.url)
+            assertEquals("weekly-panel", source.view)
+        }
+        assertEquals("sattamatkai", MarketSourceCatalog.sources.single {
+            it.url.endsWith("/milan-day")
+        }.sourceId)
     }
 
     @Test fun sourceLookupUsesExactRegisteredUrl() {
