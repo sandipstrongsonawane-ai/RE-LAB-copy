@@ -303,4 +303,28 @@ class LocalObservationDatabaseInstrumentedTest {
         context.deleteDatabase("relab_local_history.db")
     }
 
+    @Test
+    fun sourceHtmlSnapshotsRoundTripIdempotentlyAndClearWithDataset() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("relab_local_history.db")
+        val retrievedAt = Instant.parse("2026-11-18T22:30:00Z")
+        val snapshot = com.relab.core.SourcePageSnapshot(
+            sourceId = "publisher-a", market = Market.SRIDEVI, sessionId = "night",
+            requestedUrl = "https://publisher-a.example/sridevi-night",
+            finalUrl = "https://publisher-a.example/sridevi-night?view=archive",
+            retrievedAt = retrievedAt, html = "<html><body>raw night archive</body></html>"
+        )
+        LocalObservationDatabase(context).use { db ->
+            db.appendSourceSnapshots(listOf(snapshot))
+            db.appendSourceSnapshots(listOf(snapshot))
+            val restored = db.loadSourceSnapshots()
+            assertEquals(1, restored.size)
+            assertEquals(snapshot, restored.single())
+            assertEquals(snapshot.sha256, restored.single().sha256)
+            assertEquals(snapshot.utf8Bytes, restored.single().utf8Bytes)
+            db.clearDataset()
+            assertTrue(db.loadSourceSnapshots().isEmpty())
+        }
+        context.deleteDatabase("relab_local_history.db")
+    }
 }

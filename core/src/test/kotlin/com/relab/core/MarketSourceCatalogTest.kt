@@ -141,6 +141,8 @@ class MarketSourceCatalogTest {
         assertEquals(setOf(Market.SRIDEVI), srideviPair.map { it.market }.toSet())
         assertTrue(srideviPair.all { it.sessionId == "main" })
         assertTrue(srideviPair.all { it.note.contains("overlap") || it.note.contains("mirror") })
+        assertEquals("https://matkafun.io/mrecords/kalyan-panel-chart", candidates.single { it.sourceId == "matkafun" }.url)
+        assertFalse(candidates.single { it.sourceId == "matkafun" }.enabled)
         assertEquals(5, MarketSourceCatalog.enabledFor(Market.SRIDEVI).size)
         assertEquals(4, MarketSourceCatalog.enabledFor(Market.KALYAN).size)
     }

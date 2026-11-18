@@ -4,4 +4,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "RE-LAB"
-include(":app", ":core")
+include(":app", ":core", ":apk-analysis")

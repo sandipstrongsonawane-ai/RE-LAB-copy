@@ -224,7 +224,7 @@ object MarketSourceCatalog {
         ),
         MarketSource(
             Market.KALYAN, "main", "matkafun",
-            "https://matka-fun.co/panel/game12/kalyan", "weekly-panel",
+            "https://matkafun.io/mrecords/kalyan-panel-chart", "weekly-panel",
             enabled = false,
             note = "Search-indexed weekly Kalyan archive shows rows from Dec 2024 onward; raw HTML, session calendar, and parser fixture not yet audited."
         )
