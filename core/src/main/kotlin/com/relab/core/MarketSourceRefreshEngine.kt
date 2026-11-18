@@ -63,15 +63,34 @@ object MarketSourceRefreshEngine {
                     } catch (error: Exception) {
                         Result.failure(error)
                     }
-                    indexedSources.forEach { indexed ->
-                        val source = indexed.value
-                        outcomesByIndex[indexed.index] = fetched.fold(
-                            onSuccess = { page -> refreshParsed(source, page, retrievedAt) },
-                            onFailure = { error ->
-                                SourceRefreshOutcome(source, emptyList(), 0, emptyList(),
-                                    error.message ?: error.javaClass.simpleName)
+                    if (fetched.isSuccess) {
+                        val page = fetched.getOrThrow()
+                        indexedSources.groupBy { it.value.market to it.value.sessionId }.values.forEach { registrations ->
+                            val first = registrations.first()
+                            val parsed = refreshParsed(first.value, page, retrievedAt)
+                            registrations.forEach { indexed ->
+                                val source = indexed.value
+                                outcomesByIndex[indexed.index] = if (indexed.index == first.index) {
+                                    parsed
+                                } else {
+                                    parsed.copy(
+                                        source = source,
+                                        observations = parsed.observations.map {
+                                            it.copy(sourceId = source.sourceId, sourceUrl = source.url)
+                                        }
+                                    )
+                                }
                             }
-                        )
+                        }
+                    } else {
+                        val error = fetched.exceptionOrNull()!!
+                        indexedSources.forEach { indexed ->
+                            val source = indexed.value
+                            outcomesByIndex[indexed.index] = SourceRefreshOutcome(
+                                source, emptyList(), 0, emptyList(),
+                                error.message ?: error.javaClass.simpleName
+                            )
+                        }
                     }
                 }
             }
