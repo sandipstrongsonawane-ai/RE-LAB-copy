@@ -59,6 +59,20 @@ class MatkaFlashHistoryParserAdapterTest {
         assertTrue(parsed.observations.all { it.sourceUrl == url })
     }
 
+    @Test fun repeatedDateRowsAreRetainedAndReconcileAsConflict() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>Weekday</th><th>Open Panna</th><th>Jodi</th><th>Close Panna</th><th>Status</th></tr>
+              <tr><td>17 Nov 2026</td><td>Tuesday</td><td>115</td><td>73</td><td>229</td><td>Declared</td></tr>
+              <tr><td>17 Nov 2026</td><td>Tuesday</td><td>556</td><td>63</td><td>148</td><td>Declared</td></tr>
+            </table>
+        """.trimIndent()
+        val parsed = MatkaFlashHistoryParserAdapter.parse(html, pageUrl, Market.SRIDEVI, "main", retrievedAt)
+        assertEquals(2, parsed.observations.size)
+        assertEquals(setOf("115-73-229", "556-63-148"), parsed.observations.mapNotNull { it.normalizedResult }.toSet())
+        assertEquals(ReconciliationState.CONFLICT, SourceReconciliation.reconcile(parsed.observations).single().state)
+    }
+
     @Test fun adapterDoesNotClaimOtherPublishersOrHeaderLayouts() {
         val html = fixture()
         assertFalse(MatkaFlashHistoryParserAdapter.supports(html, "https://example.com/sridevi"))
