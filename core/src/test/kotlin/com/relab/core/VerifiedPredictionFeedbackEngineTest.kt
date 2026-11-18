@@ -73,12 +73,12 @@ class VerifiedPredictionFeedbackEngineTest {
                 )
             }
         }
-        val hit = prediction("2026-10-01", PannaSide.OPEN, listOf("123"))
+        val hit = prediction("2026-10-01", PannaSide.OPEN, listOf("578"))
         val miss = prediction("2026-10-02", PannaSide.OPEN, listOf("111"))
         val ledger = PredictionLearningLedger(
             lockedPredictions = listOf(hit, miss),
             verifications = listOf(
-                verification(hit, PredictionGrade.GREEN, "678"),
+                verification(hit, PredictionGrade.GREEN, "578"),
                 verification(miss, PredictionGrade.RED, "222")
             )
         )
