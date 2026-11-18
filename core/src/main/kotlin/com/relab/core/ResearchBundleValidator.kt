@@ -111,8 +111,8 @@ object ResearchBundleValidator {
                     errors += "Raw snapshot files and source-page-snapshots.csv must be present together"
                 } else if (snapshotManifest != null) {
                     val manifest = String(snapshotManifest, Charsets.UTF_8)
-                    if (!manifest.startsWith("source_id,market,session_id,requested_url,final_url,retrieved_at,html_file,sha256,utf8_bytes\\n") ||
-                        snapshotFiles.any { file -> !manifest.contains(file) }) {
+                    if (!manifest.startsWith("source_id,market,session_id,requested_url,final_url,retrieved_at,html_file,sha256,utf8_bytes\n") ||
+                        snapshotFiles.any { file -> !manifest.contains(file) || !manifest.contains(sha256(entries.getValue(file))) }) {
                         errors += "Raw snapshot manifest is malformed or omits an HTML snapshot"
                     }
                 }
