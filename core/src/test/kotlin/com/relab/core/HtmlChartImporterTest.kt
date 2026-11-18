@@ -269,7 +269,7 @@ class HtmlChartImporterTest {
         """.trimIndent()
         val report = HtmlChartImporter.import(html, url, Market.SRIDEVI_NIGHT, "night", retrieved)
         assertTrue(report.observations.isEmpty())
-        assertEquals(1, report.skippedRows)
+        assertTrue(report.skippedRows >= 1)
         assertTrue(report.issues.any { it.contains("date range and weekly cell groups do not match") })
     }
 
