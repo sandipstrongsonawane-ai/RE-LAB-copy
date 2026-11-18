@@ -133,7 +133,6 @@ object MatkaFlashHistoryParserAdapter : ChartParserAdapter {
             val jodi = cells[jodiIndex]
             val close = cells[closeIndex]
             val statusText = cells[statusIndex]
-            val raw = cells.joinToString(" | ")
             val published = statusText.equals("declared", ignoreCase = true)
             if (!published) {
                 observations += SourceObservation(
@@ -142,7 +141,7 @@ object MatkaFlashHistoryParserAdapter : ChartParserAdapter {
                     retrievedAt = retrievedAt, rawText = raw,
                     normalizedResult = null, status = ObservationStatus.PENDING
                 )
-                continue
+                return@forEachIndexed
             }
             if (!open.matches(Regex("\\d{3}")) || !jodi.matches(Regex("\\d{2}")) || !close.matches(Regex("\\d{3}"))) {
                 observations += SourceObservation(
