@@ -32,10 +32,7 @@ object PredictionLedgerCsvCodec {
     }
 
     fun import(csv: String): PredictionLearningLedger {
-        val rows = parse(csv).mapIndexed { index, row ->
-            if (index == 0 && row.isNotEmpty()) listOf(row.first().removePrefix("\uFEFF")) + row.drop(1)
-            else row
-        }
+        val rows = parse(csv.removePrefix("\uFEFF"))
         require(rows.isNotEmpty() && rows.first() == header) { "Prediction ledger CSV header is invalid." }
         val predictions = mutableListOf<LockedSidePrediction>()
         val verifications = mutableListOf<PredictionVerification>()
