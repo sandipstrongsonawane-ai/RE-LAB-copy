@@ -1235,7 +1235,7 @@ private fun refreshRegisteredSources(
     updateMessage("Refreshing ${enabledSources.size} chart sources independently…")
     Thread {
         try {
-    
+            val report = com.relab.core.MarketSourceRefreshEngine.refresh(
                 sources = enabledSources,
                 fetch = { source ->
                     val connection = URL(source.url).openConnection() as HttpURLConnection
@@ -1282,14 +1282,13 @@ private fun refreshRegisteredSources(
                             else -> "${outcome.source.sourceId}: ${outcome.observations.size} rows; issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
                         }
                     }
-                    updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted. ${detail}")
+                    updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted. $detail")
                 } catch (error: Exception) {
                     updateMessage("Refresh save failed: ${error.message ?: "Unknown error"}")
                 } finally {
                     updateBusy(false)
                 }
             }
-    
         } catch (error: Exception) {
             mainHandler.post {
                 updateMessage("Refresh failed: ${error.message ?: "Unknown error"}")
