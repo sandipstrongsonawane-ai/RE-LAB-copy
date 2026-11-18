@@ -1354,15 +1354,15 @@ private fun HomeReverseEngineeringCard(
             @Composable fun TransitionMatrix(title: String, matrix: List<List<Int>>) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(title, style = MaterialTheme.typography.labelMedium)
-                    Text("Prev ↓ / Next →   " + familyLabels.joinToString("   "), style = MaterialTheme.typography.labelSmall)
+                    Text(uiText(uiLanguage, "Previous ↓ / Next →   ", "पिछला ↓ / अगला →   ", "मागील ↓ / पुढील →   ") + familyLabels.joinToString("   "), style = MaterialTheme.typography.labelSmall)
                     matrix.forEachIndexed { row, counts ->
                         Text("${familyLabels[row].padEnd(5)}   " + counts.joinToString("      "), style = MaterialTheme.typography.labelSmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                     }
                 }
             }
-            TransitionMatrix("Open family transition matrix · previous row → next row", analysis.openFamilyDigitTransitions)
-            TransitionMatrix("Close family transition matrix · previous row → next row", analysis.closeFamilyDigitTransitions)
-            Text("Counts combine transitions at all 3 digit positions between consecutive valid dates. They are counts, not probabilities.", style = MaterialTheme.typography.labelSmall)
+            TransitionMatrix(uiText(uiLanguage, "OPEN family matrix · previous → next", "ओपन फैमिली मैट्रिक्स · पिछला → अगला", "ओपन फॅमिली मॅट्रिक्स · मागील → पुढील"), analysis.openFamilyDigitTransitions)
+            TransitionMatrix(uiText(uiLanguage, "CLOSE family matrix · previous → next", "क्लोज फैमिली मैट्रिक्स · पिछला → अगला", "क्लोज फॅमिली मॅट्रिक्स · मागील → पुढील"), analysis.closeFamilyDigitTransitions)
+            Text(uiText(uiLanguage, "Counts combine all 3 digit positions across consecutive valid dates; counts, not probabilities.", "लगातार सही तारीखों के तीनों अंकों की गिनती है; यह संभावना नहीं है।", "सलग वैध तारखांतील तिन्ही अंकांची मोजणी; ही संभाव्यता नाही."), style = MaterialTheme.typography.labelSmall)
             Text(
                 uiText(uiLanguage, "Panna-family sequence · Open: ", "पन्ना फैमिली क्रम · ओपन: ", "पन्ना फॅमिली क्रम · ओपन: ") +
                     topSequenceTransitions(analysis.openPannaFamilyTransitions),
@@ -1379,17 +1379,17 @@ private fun HomeReverseEngineeringCard(
                     "जुना 3-अंक फॅमिली क्रम → पुढील क्रम; फक्त मोजणी, नोंदलेले बदलच."),
                 style = MaterialTheme.typography.labelSmall
             )
-            Text("2) Weekday pattern · ${topWeekday(analysis.openWeekdayCounts)}", style = MaterialTheme.typography.bodySmall)
-            Text("3) Ank frequency · Open: ${topCounts(analysis.openAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "2) Weekday pattern · ", "2) हफ्ते का दिन · ", "2) आठवड्याचा दिवस · ") + topWeekday(analysis.openWeekdayCounts), style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "3) Ank frequency · Open: ", "3) अंक की गिनती · ओपन: ", "3) अंक मोजणी · ओपन: ") + topCounts(analysis.openAnkCounts, 3), style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
-            Text("4) Panna type · Open: ${typeSummary(analysis.openPannaTypeCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "4) Panna type · Open: ", "4) पन्ना प्रकार · ओपन: ", "4) पन्ना प्रकार · ओपन: ") + typeSummary(analysis.openPannaTypeCounts), style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${typeSummary(analysis.closePannaTypeCounts)}", style = MaterialTheme.typography.bodySmall)
-            Text("5) Reverse panna · Open: ${topCounts(analysis.openReversePannaCounts, 3)}", style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "5) Reverse panna · Open: ", "5) उल्टा पन्ना · ओपन: ", "5) उलटा पन्ना · ओपन: ") + topCounts(analysis.openReversePannaCounts, 3), style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeReversePannaCounts, 3)}", style = MaterialTheme.typography.bodySmall)
-            Text("6) Digit position · Open: ${topPositions(analysis.openDigitPositionCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "6) Digit position · Open: ", "6) अंक की जगह · ओपन: ", "6) अंक स्थान · ओपन: ") + topPositions(analysis.openDigitPositionCounts), style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topPositions(analysis.closeDigitPositionCounts)}", style = MaterialTheme.typography.bodySmall)
-            Text("7) Digit pairs · Open: ${analysis.openDigitPairPositionCounts.mapIndexed { i, xs -> "P${i + 1}: ${xs.take(2).joinToString("/") { it.pattern + "×" + it.count }}" }.joinToString(" · ")}", style = MaterialTheme.typography.bodySmall)
-            Text("8) Repeat gap · Open: ${gapSummary(analysis.openRepeatGaps)}", style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "7) Digit pairs · Open: ", "7) अंकों की जोड़ी · ओपन: ", "7) अंक जोड्या · ओपन: ") + analysis.openDigitPairPositionCounts.mapIndexed { i, xs -> "P${i + 1}: ${xs.take(2).joinToString("/") { it.pattern + "×" + it.count }}" }.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+            Text(uiText(uiLanguage, "8) Repeat gap · Open: ", "8) दोहराव का अंतर · ओपन: ", "8) पुनरावृत्ती अंतर · ओपन: ") + gapSummary(analysis.openRepeatGaps), style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${gapSummary(analysis.closeRepeatGaps)}", style = MaterialTheme.typography.bodySmall)
             if (intelligence != null) {
                 val shift = intelligence.distributionShift?.let { "${"%.3f".format(it)} (window=${intelligence.comparisonWindowSize})" } ?: "Insufficient history"
@@ -1399,7 +1399,7 @@ private fun HomeReverseEngineeringCard(
             } else {
                 Text("9–10) Entropy / pattern shift: more historical rows required", style = MaterialTheme.typography.bodySmall)
             }
-            Text("11) Self-learning hypotheses", style = MaterialTheme.typography.titleSmall)
+            Text(uiText(uiLanguage, "11) Self-learning hypotheses", "11) खुद सीखकर मिले नियम", "11) स्वतः शिकून सापडलेले नियम"), style = MaterialTheme.typography.titleSmall)
             if (bestHypotheses.isEmpty()) {
                 Text("Abhi koi rule minimum support + walk-forward evaluation pass nahi kar paya.", style = MaterialTheme.typography.bodySmall)
             } else bestHypotheses.forEach { rule ->
