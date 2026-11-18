@@ -49,7 +49,7 @@ class ResearchBundleExporterTest {
         }
 
         assertTrue(entries.keys.containsAll(listOf(
-            "source-observations.csv", "derived-consensus-research.csv",
+            "source-observations.csv", "source-observations.json", "derived-consensus-research.csv",
             "walk-forward-audit.csv", "historical-coverage-audit.csv",
             "source-publication-timing.csv", "prediction-learning-ledger.csv", "cross-market-associations.csv", "research-manifest.json",
             "candidate-walk-forward-audit.csv", "market-regime-change-audit.csv", "README.txt", "bundle-index.json"

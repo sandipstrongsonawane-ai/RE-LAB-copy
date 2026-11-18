@@ -17,6 +17,7 @@ object ResearchBundleValidator {
 
     private val requiredFiles = setOf(
         "source-observations.csv",
+        "source-observations.json",
         "derived-consensus-research.csv",
         "walk-forward-audit.csv",
         "cross-market-associations.csv",

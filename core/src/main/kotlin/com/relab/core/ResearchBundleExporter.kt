@@ -31,6 +31,7 @@ object ResearchBundleExporter {
     ): ByteArray {
         val artifacts = linkedMapOf(
             "source-observations.csv" to SourceCsvExporter.export(observations),
+            "source-observations.json" to SourceObservationJsonExporter.export(observations, generatedAt),
             "derived-consensus-research.csv" to DerivedChartCsvExporter.export(consensusRecords),
             "walk-forward-audit.csv" to WalkForwardCsvExporter.export(analyses),
             "cross-market-associations.csv" to CrossMarketAssociationCsvExporter.export(crossMarketReport),
@@ -86,6 +87,7 @@ object ResearchBundleExporter {
         appendLine()
         appendLine("Files:")
         appendLine("- source-observations.csv: full raw source ledger and provenance")
+        appendLine("- source-observations.json: lossless JSON copy of every raw source observation and provenance field")
         appendLine("- derived-consensus-research.csv: validated multi-source consensus records only")
         appendLine("- walk-forward-audit.csv: chronological out-of-sample baseline audit")
         appendLine("- cross-market-associations.csv: dated market/session associations with lag, overlap, mutual information and adjusted p-value")
