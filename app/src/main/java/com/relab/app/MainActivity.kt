@@ -683,6 +683,33 @@ private fun RelabHome(
                                 },
                                 modifier = Modifier.weight(1f)
                             ) { Text(if (linkBusy) uiText(uiLanguage, "Refreshing…", "रिफ्रेश हो रहा है…", "रिफ्रेश होत आहे…") else uiText(uiLanguage, "Refresh all sources", "सभी सोर्स रिफ्रेश करें", "सर्व स्रोत रिफ्रेश करा")) }
+                            OutlinedButton(
+                                enabled = !linkBusy,
+                                onClick = {
+                                    discoverMatkaFlashMarketSources(
+                                        marketSources, onSaveMarketSources,
+                                        { marketSources = it }, { importMessage = it }, { linkBusy = it }
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text(uiText(uiLanguage, "Discover online markets", "ऑनलाइन मार्केट खोजें", "ऑनलाइन मार्केट शोधा")) }
+                        }
+                        val discoveredDisabled = marketSources.count {
+                            it.sourceId == "matkaflash" && !it.enabled && it.note.contains("Discovered from MatkaFlash")
+                        }
+                        if (discoveredDisabled > 0) {
+                            OutlinedButton(
+                                enabled = !linkBusy,
+                                onClick = {
+                                    val enabledCount = discoveredDisabled
+                                    marketSources = marketSources.map {
+                                        if (it.sourceId == "matkaflash" && !it.enabled && it.note.contains("Discovered from MatkaFlash")) it.copy(enabled = true) else it
+                                    }
+                                    onSaveMarketSources(marketSources)
+                                    importMessage = "Enabled $enabledCount discovered MatkaFlash markets. Refresh when ready; all pages from this publisher remain one evidence source."
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(uiText(uiLanguage, "Enable discovered MatkaFlash sources ($discoveredDisabled)", "खोजे गए MatkaFlash सोर्स चालू करें ($discoveredDisabled)", "शोधलेले MatkaFlash स्रोत सुरू करा ($discoveredDisabled)")) }
                         }
                         Text(uiText(uiLanguage, "Registered sources: ${marketSources.size} · Enabled: ${marketSources.count { it.enabled }}", "कुल सोर्स: ${marketSources.size} · चालू: ${marketSources.count { it.enabled }}", "नोंदणीकृत स्रोत: ${marketSources.size} · सुरू: ${marketSources.count { it.enabled }}"))
                         marketSources.forEach { source ->
@@ -1491,6 +1518,68 @@ private fun refreshRegisteredSources(
         } catch (error: Exception) {
             mainHandler.post {
                 updateMessage("Refresh failed: ${error.message ?: "Unknown error"}")
+                updateBusy(false)
+            }
+        }
+    }.start()
+}
+
+ 
+private fun discoverMatkaFlashMarketSources(
+    existing: List<MarketSource>,
+    saveSources: (List<MarketSource>) -> Unit,
+    updateSources: (List<MarketSource>) -> Unit,
+    updateMessage: (String) -> Unit,
+    updateBusy: (Boolean) -> Unit
+) {
+    val mainHandler = Handler(Looper.getMainLooper())
+    updateBusy(true)
+    updateMessage("Discovering dated market panel charts from MatkaFlash…")
+    Thread {
+        try {
+            val connection = URL(com.relab.core.MatkaFlashMarketDirectoryAdapter.DIRECTORY_URL)
+                .openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 15000
+            connection.readTimeout = 20000
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("User-Agent", "RE-LAB-Android/0.1")
+            connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+            val discovered = try {
+                val code = connection.responseCode
+                require(code in 200..299) { "Directory returned HTTP $code" }
+                val contentType = connection.contentType.orEmpty().lowercase()
+                require(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.isBlank()) {
+                    "Unsupported directory content type: $contentType"
+                }
+                val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
+                com.relab.core.MatkaFlashMarketDirectoryAdapter.discover(
+                    bytes.toString(Charsets.UTF_8), connection.url.toString()
+                )
+            } finally {
+                connection.disconnect()
+            }
+            var merged = existing
+            var added = 0
+            discovered.forEach { source ->
+                val normalized = UserMarketSourceRegistry.normalizeUrl(source.url)
+                if (merged.none { UserMarketSourceRegistry.normalizeUrl(it.url) == normalized }) {
+                    merged = UserMarketSourceRegistry.add(merged, source)
+                    added++
+                }
+            }
+            mainHandler.post {
+                updateSources(merged)
+                saveSources(merged)
+                updateMessage(
+                    "MatkaFlash directory found ${discovered.size} dated panel sources; added $added new markets. " +
+                        "New sources are disabled to avoid firing 100+ requests at once. Enable selected sources, then refresh."
+                )
+                updateBusy(false)
+            }
+        } catch (error: Exception) {
+            mainHandler.post {
+                updateMessage("Market discovery failed: ${error.message ?: "Unknown error"}")
                 updateBusy(false)
             }
         }
