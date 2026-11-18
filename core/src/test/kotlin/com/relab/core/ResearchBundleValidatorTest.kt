@@ -115,7 +115,7 @@ class ResearchBundleValidatorTest {
             appendLine("{")
             appendLine("  \"bundle_format_version\": 2,")
             appendLine("  \"artifacts\": [")
-            appendLine(entries.entries.map { (name, bytes) ->
+            appendLine(entries.entries.filterKeys { it != "bundle-index.json" }.map { (name, bytes) ->
                 val hash = MessageDigest.getInstance("SHA-256").digest(bytes)
                     .joinToString("") { "%02x".format(it) }
                 "    {\"file\":\"$name\",\"utf8_bytes\":${bytes.size},\"sha256\":\"$hash\"}"
