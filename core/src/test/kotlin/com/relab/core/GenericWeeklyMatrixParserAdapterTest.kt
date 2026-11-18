@@ -245,4 +245,65 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertEquals(1, parsed.skippedRows)
     }
 
+
+    @Test fun parsesVerifiedLivesattamatkaAdditionalMarketsWithoutCombiningTheirIdentities() {
+        fun parse(url: String, market: Market, range: String, cells: List<String>) =
+            GenericWeeklyMatrixParserAdapter.parse(
+                """<table><tr><th>Date</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+                   <tr><td>$range</td>${cells.joinToString("") { "<td>$it</td>" }}</tr></table>""",
+                url, market, "main", retrievedAt
+            )
+
+        val timeBazar = parse(
+            "https://livesattamatka.net/panna-chart/time-bazar", Market.TIME_BAZAR,
+            "02/11 to 08/11 2026",
+            listOf("2 5 8 51 2 3 6", "2 4 9 50 2 8 0", "4 6 9 99 3 7 9",
+                "1 3 9 31 5 7 9", "", "", "")
+        )
+        assertEquals(7, timeBazar.observations.size)
+        assertEquals("258-51-236", timeBazar.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, timeBazar.observations.last().status)
+        assertTrue(timeBazar.observations.all { it.sourceId == "livesattamatka.net" })
+
+        val mainBazar = parse(
+            "https://livesattamatka.net/panna-chart/main-bazar", Market.MAIN_BAZAR,
+            "02/11 to 08/11 2026",
+            listOf("1 1 0 29 2 7 0", "2 5 0 70 1 2 7", "1 3 5 96 2 6 8",
+                "5 5 7 73 7 8 8", "", "", "")
+        )
+        assertEquals(7, mainBazar.observations.size)
+        assertEquals("110-29-270", mainBazar.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR,
+            mainBazar.observations.single { it.date == LocalDate.parse("2026-11-07") }.status)
+
+        val mainNight = parse(
+            "https://livesattamatka.net/panna-chart/main-bazar-night", Market.MAIN_BAZAR_NIGHT,
+            "09/11 to 15/11 2026",
+            listOf("5 7 8 07 3 4 0", "6 8 8 26 1 7 8", "3 5 5 37 7 0 0",
+                "2 5 0 77 1 2 4", "1 4 0 59 1 8 0", "1 2 8 10 5 6 9", "")
+        )
+        assertEquals(7, mainNight.observations.size)
+        assertEquals("578-07-340", mainNight.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, mainNight.observations.last().status)
+
+        val timeBazarDay = parse(
+            "https://livesattamatka.net/panna-chart/time-bazar-day", Market.TIME_BAZAR_DAY,
+            "09/11 to 15/11 2026",
+            listOf("4 6 0 00 5 5 0", "2 8 0 06 1 7 8", "3 5 0 86 4 6 6",
+                "2 4 4 06 5 5 6", "8 9 0 73 1 3 9", "6 6 0 20 5 6 9", "")
+        )
+        assertEquals("460-00-550", timeBazarDay.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, timeBazarDay.observations.last().status)
+
+        val newTimeBazar = parse(
+            "https://livesattamatka.net/panna-chart/new-time-bazar", Market.NEW_TIME_BAZAR,
+            "02/11 to 08/11 2026",
+            listOf("2 3 0 59 1 9 9", "1 5 8 45 3 5 7", "3 7 8 84 1 1 2",
+                "1 6 7 42 2 5 5", "3 4 5 22 1 2 9", "1 5 6 24 4 0 0", "")
+        )
+        assertEquals("230-59-199", newTimeBazar.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, newTimeBazar.observations.last().status)
+        assertNotEquals(timeBazar.observations.first().market, newTimeBazar.observations.first().market)
+    }
+
 }
