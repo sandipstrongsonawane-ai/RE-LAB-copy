@@ -468,6 +468,30 @@ private fun RelabHome(
                             val performance = predictionLedger.performance(key.first, key.second, key.third)
                             Text("${key.first} · ${key.second} · ${key.third}: GREEN ${performance.green} / RED ${performance.red} / GREY ${performance.grey} · verified ${performance.verified}", style = MaterialTheme.typography.bodySmall)
                         }
+                        Text("Recent locked predictions · latest verification", style = MaterialTheme.typography.titleSmall)
+                        predictionLedger.lockedPredictions
+                            .sortedWith(compareByDescending<com.relab.core.LockedSidePrediction> { it.targetDate }.thenByDescending { it.lockedAt })
+                            .take(20)
+                            .forEach { prediction ->
+                                val latest = predictionLedger.verifications
+                                    .filter { it.predictionId == prediction.id }
+                                    .maxByOrNull { it.attempt }
+                                val gradeLabel = when (latest?.grade) {
+                                    com.relab.core.PredictionGrade.GREEN -> "GREEN · HIT"
+                                    com.relab.core.PredictionGrade.RED -> "RED · MISS"
+                                    com.relab.core.PredictionGrade.GREY -> "GREY · UNVERIFIED"
+                                    null -> "PENDING · AWAITING RESULT"
+                                }
+                                val actualLabel = latest?.actualPanna?.let { " · actual $it" } ?: ""
+                                Text(
+                                    "${prediction.targetDate} · ${prediction.market}/${prediction.sessionId} · ${prediction.side} · $gradeLabel$actualLabel",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    "Locked candidates: ${prediction.candidates.joinToString(", ")}",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         Button(
                             enabled = observations.isNotEmpty(),
                             onClick = {
