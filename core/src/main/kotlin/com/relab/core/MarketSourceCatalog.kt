@@ -29,6 +29,26 @@ data class MarketSource(
 
 object MarketSourceCatalog {
     val sources: List<MarketSource> = listOf(
+        // Search-index-discovered long-range archives. Keep disabled until raw HTML
+        // snapshots are captured and parser output is independently fixture-validated.
+        MarketSource(
+            Market.SRIDEVI, "main", "dlbosss",
+            "https://www.dlbosss.com/panel-chart-record/sridevi.php", "weekly-panel",
+            enabled = false,
+            note = "Search-index excerpt shows dated 2024-2026 weekly panel rows; raw snapshot and parser fixture not yet audited."
+        ),
+        MarketSource(
+            Market.SRIDEVI, "main", "realmatka",
+            "https://www.realmatka.in/panel-chart-record/sridevi", "weekly-panel",
+            enabled = false,
+            note = "Search-index excerpt shows dated 2024 weekly panel rows; raw snapshot and parser fixture not yet audited."
+        ),
+        MarketSource(
+            Market.KALYAN, "main", "ratan567official",
+            "https://ratan567official.com/kalyan/pana-chart/", "weekly-panel",
+            enabled = false,
+            note = "Search-index excerpt reports 303 dated results from Sep 2025 to Sep 2026; raw snapshot and parser fixture not yet audited."
+        ),
         MarketSource(
             Market.SRIDEVI, "main", "hpofficial",
             "https://hpofficial.in/sridevi-panel-chart/", "panel"

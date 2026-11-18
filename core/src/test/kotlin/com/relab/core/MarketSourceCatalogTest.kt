@@ -127,6 +127,17 @@ class MarketSourceCatalogTest {
         }.sourceId)
     }
 
+
+    @Test fun newlyDiscoveredLongRangeArchivesRemainDisabledUntilFixtureAudit() {
+        val candidates = MarketSourceCatalog.sources.filter {
+            it.sourceId in setOf("dlbosss", "realmatka", "ratan567official")
+        }
+        assertEquals(3, candidates.size)
+        assertTrue(candidates.none { it.enabled })
+        assertEquals(5, MarketSourceCatalog.enabledFor(Market.SRIDEVI).size)
+        assertEquals(4, MarketSourceCatalog.enabledFor(Market.KALYAN).size)
+    }
+
     @Test fun sourceLookupUsesExactRegisteredUrl() {
         val source = MarketSourceCatalog.sources.first()
         assertEquals(source, MarketSourceCatalog.findByUrl(source.url))

@@ -40,3 +40,16 @@ This register lists candidate public archives for source-observation collection.
 ## Data ingestion status
 
 This register is a collection plan and reconciliation aid, **not proof that these archives have been downloaded into the app**. Only observations present in an imported source CSV are counted by the app's coverage audit or pattern analysis. Record the actual retrieval instant and do not backdate a current scrape to the chart date.
+
+
+## Newly discovered archive candidates — 18 Nov 2026
+
+These additional pages surfaced during historical-coverage research. They are recorded as **disabled candidates** in the source catalog, not active ingestion sources, because search-index excerpts are not raw HTML snapshots and have not yet passed fixture-based extraction and cross-publisher reconciliation.
+
+| Candidate source ID | Market/session | Archive URL | Search-index evidence | Gate before enabling |
+|---|---|---|---|---|
+| `dlbosss` | Sridevi / main | https://www.dlbosss.com/panel-chart-record/sridevi.php | Weekly panel rows covering 2024–2026 are visible in indexed page text. | Capture raw HTML; verify week boundaries, 7-day cells, missing markers and panna/jodi math. |
+| `realmatka` | Sridevi / main | https://www.realmatka.in/panel-chart-record/sridevi | Indexed excerpt includes dated weekly rows from 2024. | Capture raw HTML; fixture-test parser and compare dates/results against existing independent publishers. |
+| `ratan567official` | Kalyan / main | https://ratan567official.com/kalyan/pana-chart/ | Page excerpt reports 303 dated results from 24 Sep 2025 to 23 Sep 2026. | Capture raw HTML; confirm Kalyan evening session identity and test calendar/missing-cell behavior. |
+
+Do not count these candidates toward independent-source consensus or historical coverage until their raw snapshots are imported. Different domains are treated as different publisher IDs provisionally; common ownership or mirrored content must be investigated before counting corroboration.
