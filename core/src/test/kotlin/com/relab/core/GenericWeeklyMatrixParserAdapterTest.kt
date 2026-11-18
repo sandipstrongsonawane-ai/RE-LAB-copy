@@ -115,6 +115,36 @@ class GenericWeeklyMatrixParserAdapterTest {
     }
 
 
+
+    @Test fun parsesMondayAnchoredMatkaFlashPanelArchiveRows() {
+        val html = """
+            <table>
+              <tr><th>Week</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+              <tr><td>02 Nov 2026</td><td>133-75-690</td><td>230-51-489</td><td>580-37-566</td><td>—</td><td>447-51-146</td><td>Holiday</td><td>—</td></tr>
+            </table>
+        """.trimIndent()
+        val url = "https://matkaflash.com/milan-day/panel-chart"
+
+        assertTrue(GenericWeeklyMatrixParserAdapter.supports(html, url))
+        val parsed = ChartParserRegistry.parse(html, url, Market.MILAN_DAY, "main", retrievedAt)
+
+        assertEquals("generic-weekly-matrix-v1", parsed.parserId)
+        assertEquals(7, parsed.observations.size)
+        assertEquals("133-75-690", parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-02")
+        }.normalizedResult)
+        assertEquals("230-51-489", parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-03")
+        }.normalizedResult)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-05")
+        }.status)
+        assertEquals(ObservationStatus.HOLIDAY_CLOSED, parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-07")
+        }.status)
+        assertEquals("matkaflash.com", parsed.observations.first().sourceId)
+    }
+
     @Test fun preservesRepeatedDateRowsSoConflictingPublisherValuesAreNotSilentlyDiscarded() {
         val html = """
             <table>
