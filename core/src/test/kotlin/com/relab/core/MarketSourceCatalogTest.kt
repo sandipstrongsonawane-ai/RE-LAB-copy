@@ -7,8 +7,8 @@ class MarketSourceCatalogTest {
     @Test fun hasIndependentSrideviAndKalyanSourceSets() {
         val sridevi = MarketSourceCatalog.enabledFor(Market.SRIDEVI)
         val kalyan = MarketSourceCatalog.enabledFor(Market.KALYAN)
-        assertEquals(3, sridevi.size)
-        assertEquals(2, kalyan.size)
+        assertEquals(4, sridevi.size)
+        assertEquals(3, kalyan.size)
         assertTrue(sridevi.all { it.market == Market.SRIDEVI && it.sessionId == "main" })
         assertTrue(kalyan.all { it.market == Market.KALYAN && it.sessionId == "main" })
         assertFalse(sridevi.any { it in kalyan })
@@ -52,14 +52,39 @@ class MarketSourceCatalogTest {
         assertEquals("matkaflash", night.sourceId)
     }
 
-    @Test fun livesattamatkaNetArchivesStayDisabledAndSharePublisherIdentity() {
+    @Test fun livesattamatkaNetArchivesAreEnabledButSharePublisherIdentity() {
         val netSources = MarketSourceCatalog.sources.filter { it.url.contains("livesattamatka.net") }
         assertEquals(4, netSources.size)
-        assertTrue(netSources.all { !it.enabled && it.sourceId == "livesattamatka" })
+        assertTrue(netSources.all { it.enabled && it.sourceId == "livesattamatka" })
         assertEquals(
             setOf(Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.valueOf("PUNA_BAZAR")),
             netSources.map { it.market }.toSet()
         )
+    }
+
+    @Test fun addsFiveMoreVerifiedWeeklyMarketsWithSeparateMarketIdentities() {
+        val expected = mapOf(
+            Market.TIME_BAZAR to "https://livesattamatka.net/panna-chart/time-bazar",
+            Market.MAIN_BAZAR to "https://livesattamatka.net/panna-chart/main-bazar",
+            Market.MAIN_BAZAR_NIGHT to "https://livesattamatka.net/panna-chart/main-bazar-night",
+            Market.TIME_BAZAR_DAY to "https://livesattamatka.net/panna-chart/time-bazar-day",
+            Market.NEW_TIME_BAZAR to "https://livesattamatka.net/panna-chart/new-time-bazar"
+        )
+        expected.forEach { (market, url) ->
+            val source = MarketSourceCatalog.enabledFor(market).single()
+            assertEquals(url, source.url)
+            assertEquals("livesattamatka", source.sourceId)
+            assertEquals("weekly-panel", source.view)
+        }
+        assertNotEquals(Market.TIME_BAZAR, Market.TIME_BAZAR_DAY)
+        assertNotEquals(Market.MAIN_BAZAR, Market.MAIN_BAZAR_NIGHT)
+        assertTrue(Market.TIME_BAZAR.activeDays.none { it == java.time.DayOfWeek.SUNDAY })
+        assertTrue(Market.NEW_TIME_BAZAR.activeDays.none { it == java.time.DayOfWeek.SUNDAY })
+        assertEquals(setOf(
+            java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY,
+            java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY,
+            java.time.DayOfWeek.FRIDAY
+        ), Market.MAIN_BAZAR.activeDays)
     }
 
     @Test fun sourceLookupUsesExactRegisteredUrl() {
