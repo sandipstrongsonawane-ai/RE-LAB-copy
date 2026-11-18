@@ -26,12 +26,35 @@ internal data class DashboardAnalytics(
     val sourceTiming: List<SourceTimingSummary>
 ) {
     companion object {
+        // A single-entry exact-input cache avoids repeating the expensive full
+        // reconciliation/research pipeline when Compose re-enters the same state.
+        // Equality is structural (not a hash-only key), so changed data/settings
+        // always invalidate the cached snapshot.
+        private data class CacheKey(
+            val observations: List<SourceObservation>,
+            val coverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
+            val marketSources: List<MarketSource>,
+            val learningLedger: PredictionLearningLedger
+        )
+
+        @Volatile private var cachedKey: CacheKey? = null
+        @Volatile private var cachedValue: DashboardAnalytics? = null
+
+        @Synchronized
         fun compute(
             observations: List<SourceObservation>,
             coverageRangeOverrides: Map<String, Pair<LocalDate, LocalDate>>,
             marketSources: List<MarketSource>,
             learningLedger: PredictionLearningLedger
         ): DashboardAnalytics {
+            val key = CacheKey(
+                observations = observations.toList(),
+                coverageRanges = coverageRangeOverrides.toMap(),
+                marketSources = marketSources.toList(),
+                learningLedger = learningLedger
+            )
+            if (cachedKey == key) cachedValue?.let { return it }
+
             val groups = SourceReconciliation.reconcile(observations)
             val chartBuild = ReconciledChartBuilder.build(observations)
             val researchRecords = ReconciledChartBuilder.buildExploratoryRecords(observations)
@@ -178,7 +201,10 @@ internal data class DashboardAnalytics(
                 coverageReports = coverageReports,
                 publisherCoverageReports = publisherCoverageReports,
                 sourceTiming = SourceTimingAnalytics.summarize(observations)
-            )
+            ).also { result ->
+                cachedKey = key
+                cachedValue = result
+            }
         }
     }
 }
