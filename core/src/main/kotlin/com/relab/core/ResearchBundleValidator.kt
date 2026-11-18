@@ -22,6 +22,8 @@ object ResearchBundleValidator {
         "cross-market-associations.csv",
         "candidate-walk-forward-audit.csv",
         "market-regime-change-audit.csv",
+        "weekday-pattern-audit.csv",
+        "research-findings.txt",
         "historical-coverage-audit.csv",
         "source-publication-timing.csv",
         "prediction-learning-ledger.csv",
