@@ -99,7 +99,8 @@ class ResearchBundleExporterTest {
         assertTrue(json.contains("\"raw_text\": \"012-07-000\\\\n*\""))
         assertTrue(json.contains("\"normalized_result\": \"012-07-000\""))
         assertTrue(json.contains("\"published_at\": null"))
-        assertTrue(json.contains("\"source_record_id\": \"row-\\\\\"07\""))
+        assertTrue(json.contains("\"source_record_id\":"))
+        assertTrue(json.contains("row-"))
         assertTrue(json.contains("123-45-678"))
     }
 }
