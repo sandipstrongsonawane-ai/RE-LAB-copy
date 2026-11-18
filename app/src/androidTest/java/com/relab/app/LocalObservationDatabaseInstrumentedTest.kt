@@ -141,6 +141,50 @@ class LocalObservationDatabaseInstrumentedTest {
     }
 
     @Test
+    fun restoringSameResearchBundleTwiceDoesNotDuplicateObservationsOrLedgerHistory() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("relab_local_history.db")
+        val lockedAt = Instant.parse("2026-11-18T04:00:00Z")
+        val prediction = LockedSidePrediction(
+            Market.SRIDEVI, "main", LocalDate.parse("2026-11-19"), PannaSide.OPEN,
+            listOf("123", "456"), 24, lockedAt, "idempotent bundle fixture"
+        )
+        val verification = PredictionVerification(
+            prediction.id, PredictionGrade.GREY, null, null, null,
+            lockedAt.plusSeconds(3600), ReconciliationState.SINGLE_SOURCE_UNVERIFIED,
+            "Waiting for independent publisher evidence.", attempt = 1
+        )
+        val observation = SourceObservation(
+            market = Market.SRIDEVI,
+            sessionId = "main",
+            date = LocalDate.parse("2026-11-18"),
+            sourceId = "publisher-a",
+            sourceRecordId = "bundle-row-1",
+            sourceUrl = "https://publisher.example/chart",
+            retrievedAt = lockedAt,
+            publishedAt = null,
+            rawText = "pending",
+            normalizedResult = null,
+            status = ObservationStatus.MISSING_FROM_SOURCE
+        )
+        val ledger = PredictionLearningLedger(listOf(prediction), listOf(verification))
+        LocalObservationDatabase(context).use { db ->
+            val first = db.appendResearchBundle("same-backup", listOf(observation), ledger)
+            assertEquals(1, first.first.size)
+            assertEquals(1, first.second.lockedPredictions.size)
+            assertEquals(1, first.second.verifications.size)
+
+            val second = db.appendResearchBundle("same-backup", listOf(observation), ledger)
+            assertEquals(first.first, second.first)
+            assertEquals(first.second, second.second)
+            assertEquals(1, db.loadObservations().size)
+            assertEquals(1, db.loadPredictionLedger().lockedPredictions.size)
+            assertEquals(1, db.loadPredictionLedger().verifications.size)
+        }
+        context.deleteDatabase("relab_local_history.db")
+    }
+
+    @Test
     fun versionOneDatabaseMigratesWithoutDroppingObservationHistory() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         context.deleteDatabase("relab_local_history.db")
