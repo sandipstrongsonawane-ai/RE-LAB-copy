@@ -78,7 +78,7 @@ object ResearchBundleValidator {
         var verified = 0
         if (indexBytes != null) {
             val index = String(indexBytes, Charsets.UTF_8)
-            if (!Regex(""""bundle_format_version"\s*:\s*1""").containsMatchIn(index)) {
+            if (!Regex(""""bundle_format_version"\s*:\s*2""").containsMatchIn(index)) {
                 errors += "Unsupported bundle format version"
             }
             val matches = indexEntry.findAll(index).toList()
