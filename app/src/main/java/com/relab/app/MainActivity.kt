@@ -326,7 +326,7 @@ private fun RelabHome(
         if (!initialDataLoaded) return@LaunchedEffect
         val snapshot = observations
         val ranges = coverageRangeOverrides
-        dashboardAnalytics = null
+        // Keep the last completed snapshot visible while the next one is computed.
         analyticsBusy = true
         try {
             dashboardAnalytics = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
@@ -926,6 +926,7 @@ private fun RelabHome(
                         }
                     }
                 }
+                if (!initialDataLoaded) Text(uiText(uiLanguage, "Local chart history load ho raha hai…", "स्थानीय चार्ट डेटा लोड हो रहा है…", "स्थानिक चार्ट डेटा लोड होत आहे…"), style = MaterialTheme.typography.bodySmall)
                 if (analyticsBusy) Text(uiText(uiLanguage, "Updating historical analytics in background…", "पुराने डेटा का विश्लेषण चल रहा है…", "ऐतिहासिक डेटाचे विश्लेषण सुरू आहे…"), style = MaterialTheme.typography.bodySmall)
                 }
                 if (activeSection == "home") {
