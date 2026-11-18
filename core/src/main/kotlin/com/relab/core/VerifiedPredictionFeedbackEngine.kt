@@ -1,6 +1,7 @@
 package com.relab.core
 
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 data class VerifiedFamilyFeedback(
     val familySequence: String,
@@ -35,6 +36,8 @@ object VerifiedPredictionFeedbackEngine {
             .groupBy { it.predictionId }
             .mapNotNull { (_, attempts) -> attempts.maxByOrNull { it.attempt } }
             .filter { it.grade != PredictionGrade.GREY && it.actualPanna?.matches(Regex("\\d{3}")) == true }
+            // Only outcomes actually verified before this target may affect its ranking.
+            .filter { it.verifiedAt.isBefore(targetDate.atStartOfDay(ZoneOffset.UTC).toInstant()) }
             .mapNotNull { verification ->
                 val prediction = ledger.lockedPredictions.singleOrNull { it.id == verification.predictionId }
                     ?: return@mapNotNull null
