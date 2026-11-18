@@ -33,7 +33,8 @@ data class PredictionVerification(
     val matchedRank: Int?,
     val verifiedAt: Instant,
     val reconciliationState: ReconciliationState,
-    val explanation: String
+    val explanation: String,
+    val attempt: Int = 1
 )
 
 data class LearningPerformance(
@@ -57,9 +58,11 @@ data class PredictionLearningLedger(
         require(lockedPredictions.map { it.id }.distinct().size == lockedPredictions.size) {
             "A prediction for a market/session/date/side can only be locked once."
         }
-        require(verifications.map { it.predictionId }.distinct().size == verifications.size) {
-            "A locked prediction can only be verified once."
+        require(verifications.all { it.attempt > 0 }) { "Verification attempt must be positive." }
+        require(verifications.map { it.predictionId to it.attempt }.distinct().size == verifications.size) {
+            "Verification attempt numbers must be unique per prediction."
         }
+        require(verifications.groupBy { it.predictionId }.keys.all { id -> lockedPredictions.any { it.id == id } }) {
         require(verifications.all { result -> lockedPredictions.any { it.id == result.predictionId } }) {
             "Verification must refer to a previously locked prediction."
         }
@@ -71,6 +74,7 @@ data class PredictionLearningLedger(
         }
         val ids = predictions.map { it.id }.toSet()
         val results = verifications.filter { it.predictionId in ids }
+            .groupBy { it.predictionId }.values.mapNotNull { attempts -> attempts.maxByOrNull { it.attempt } }
         val green = results.count { it.grade == PredictionGrade.GREEN }
         val red = results.count { it.grade == PredictionGrade.RED }
         val grey = results.count { it.grade == PredictionGrade.GREY }
@@ -86,8 +90,8 @@ data class PredictionLearningLedger(
 }
 
 /**
- * A prediction is frozen before its target date. Verification only accepts independent
- * publisher consensus; missing, conflicting, or single-source outcomes are GREY.
+ * A prediction is frozen before its target date. Verification only grades independent publisher consensus; missing, conflicting, or single-source
+ * outcomes are provisional GREY attempts that can be rechecked without rewriting history.
  * The ledger is immutable so later learning cannot rewrite a historical prediction.
  */
 object PredictionLearningCycle {
@@ -133,9 +137,8 @@ object PredictionLearningCycle {
     ): Pair<PredictionLearningLedger, PredictionVerification> {
         val prediction = ledger.lockedPredictions.singleOrNull { it.id == predictionId }
             ?: throw IllegalArgumentException("Unknown locked prediction.")
-        require(ledger.verifications.none { it.predictionId == predictionId }) {
-            "Prediction was already verified; verification history is immutable."
-        }
+        // Each check is appended as a new immutable attempt. A GREY attempt can be
+        // superseded by a later consensus check without rewriting prior evidence.
 
         val group = SourceReconciliation.reconcile(observations).singleOrNull {
             it.market == prediction.market && it.sessionId == prediction.sessionId &&
@@ -165,7 +168,8 @@ object PredictionLearningCycle {
         }
         val verification = PredictionVerification(
             prediction.id, grade, actual,
-            agreed?.split("-")?.getOrNull(1), rank, verifiedAt, state, explanation
+            agreed?.split("-")?.getOrNull(1), rank, verifiedAt, state, explanation,
+            attempt = (ledger.verifications.filter { it.predictionId == predictionId }.maxOfOrNull { it.attempt } ?: 0) + 1
         )
         return ledger.copy(verifications = ledger.verifications + verification) to verification
     }
