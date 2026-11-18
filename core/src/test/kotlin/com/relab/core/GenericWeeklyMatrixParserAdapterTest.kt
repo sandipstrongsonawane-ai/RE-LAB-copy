@@ -98,6 +98,24 @@ class GenericWeeklyMatrixParserAdapterTest {
     }
 
 
+    @Test fun preservesRepeatedDateRowsSoConflictingPublisherValuesAreNotSilentlyDiscarded() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+              <tr><td>16/11/2026 to 22/11/2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+              <tr><td>16/11/2026 to 22/11/2026</td><td>99965456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+            </table>
+        """.trimIndent()
+        val parsed = GenericWeeklyMatrixParserAdapter.parse(
+            html, "https://publisher.example/chart", Market.SRIDEVI, "main", retrievedAt
+        )
+
+        val mondayRows = parsed.observations.filter { it.date == LocalDate.parse("2026-11-16") }
+        assertEquals(2, mondayRows.size)
+        assertEquals(setOf("123-65-456", "999-65-456"), mondayRows.mapNotNull { it.normalizedResult }.toSet())
+        assertEquals(14, parsed.observations.size)
+    }
+
     @Test fun supportsWeekdayColumnsThatWrapAcrossSundayToMonday() {
         val html = """
             <table>
