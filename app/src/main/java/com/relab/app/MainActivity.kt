@@ -294,14 +294,14 @@ private fun RelabHome(
     var coverageRangeOverrides by remember { mutableStateOf(initialCoverageRanges) }
     var dashboardAnalytics by remember { mutableStateOf<DashboardAnalytics?>(null) }
     var analyticsBusy by remember { mutableStateOf(false) }
-    LaunchedEffect(observations, coverageRangeOverrides, marketSources) {
+    LaunchedEffect(observations, predictionLedger, coverageRangeOverrides, marketSources) {
         val snapshot = observations
         val ranges = coverageRangeOverrides
         dashboardAnalytics = null
         analyticsBusy = true
         try {
             dashboardAnalytics = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                DashboardAnalytics.compute(snapshot, ranges, marketSources)
+                DashboardAnalytics.compute(snapshot, ranges, marketSources, predictionLedger)
             }
         } catch (error: Exception) {
             importMessage = "Research analysis failed: ${error.message ?: "Unknown error"}"
@@ -840,27 +840,37 @@ private fun RelabHome(
 
 @Composable
 private fun CandidateWalkForwardCard(report: com.relab.core.CandidateWalkForwardReport) {
-    fun rate(hits: Int): String =
-        if (report.evaluatedDates == 0) "—" else "${"%.1f".format(hits * 100.0 / report.evaluatedDates)}%"
+    fun rate(metrics: com.relab.core.CandidateWalkForwardMetrics, hits: Int): String =
+        if (metrics.evaluatedDates == 0) "—"
+        else "${"%.1f".format(hits * 100.0 / metrics.evaluatedDates)}%"
+
+    fun metricLine(label: String, metrics: com.relab.core.CandidateWalkForwardMetrics): String =
+        "$label · evaluated ${metrics.evaluatedDates} · Top-1 ${rate(metrics, metrics.top1Hits)} · " +
+            "Top-3 ${rate(metrics, metrics.top3Hits)} · Top-5 ${rate(metrics, metrics.top5Hits)} · " +
+            "Top-10 ${rate(metrics, metrics.top10Hits)} · MRR ${metrics.meanReciprocalRank?.let { "%.3f".format(it) } ?: "—"}"
+
+    val feedbackValues = report.feedbackAvailability.map { it.verifiedPredictionsAvailable }
+    val feedbackSummary = if (feedbackValues.isEmpty()) {
+        "Prior verified feedback: no target dates"
+    } else {
+        "Prior verified feedback per target: min ${feedbackValues.minOrNull()} · max ${feedbackValues.maxOrNull()} · " +
+            "targets with feedback ${feedbackValues.count { it > 0 }}/${feedbackValues.size}"
+    }
 
     Card {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("${report.market} · ${report.sessionId} · ${report.side}", style = MaterialTheme.typography.titleMedium)
             Text(
-                "${if (report.exploratory) "EXPLORATORY · SINGLE-SOURCE INCLUDED" else "CONSENSUS ONLY"}",
+                if (report.exploratory) "EXPLORATORY · SINGLE-SOURCE INCLUDED" else "CONSENSUS ONLY",
                 style = MaterialTheme.typography.labelSmall
             )
+            Text("Targets: ${report.totalTargetDates} · Insufficient earlier history: ${report.insufficientHistoryDates}")
+            Text(metricLine("BASELINE", report.baselineMetrics), style = MaterialTheme.typography.bodySmall)
+            Text(metricLine("LEARNING ENABLED", report.learningEnabledMetrics), style = MaterialTheme.typography.bodySmall)
+            Text(feedbackSummary, style = MaterialTheme.typography.bodySmall)
             Text(
-                "Targets: ${report.totalTargetDates} · Evaluated: ${report.evaluatedDates} · Insufficient earlier history: ${report.insufficientHistoryDates}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                "Actual panna in ranked list · Top 1: ${rate(report.top1Hits)} · Top 3: ${rate(report.top3Hits)} · Top 5: ${rate(report.top5Hits)} · Top 10: ${rate(report.top10Hits)}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                "Mean reciprocal rank: ${report.meanReciprocalRank?.let { "%.3f".format(it) } ?: "—"}",
-                style = MaterialTheme.typography.bodySmall
+                "Feedback is eligible only when GREEN/RED verification was recorded before the target date. Same-day, future and GREY outcomes are excluded.",
+                style = MaterialTheme.typography.labelSmall
             )
             Text("Candidate-level exact hits when selected", style = MaterialTheme.typography.titleSmall)
             report.candidates.take(8).forEach { candidate ->
