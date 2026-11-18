@@ -815,7 +815,7 @@ private fun RelabHome(
                 if (patternAnalyses.isEmpty()) {
                     Text(uiText(uiLanguage, "No valid published rows available for pattern analysis yet. Check the imported chart rows and source format.", "पैटर्न विश्लेषण के लिए अभी वैध प्रकाशित रिकॉर्ड नहीं हैं। इम्पोर्ट किए गए चार्ट रिकॉर्ड और सोर्स फॉर्मेट जांचें।", "पॅटर्न विश्लेषणासाठी अद्याप वैध प्रकाशित नोंदी नाहीत. आयात केलेल्या चार्ट नोंदी आणि स्रोत फॉरमॅट तपासा."))
                 } else {
-                    patternAnalyses.forEach { analysis -> PatternResearchCard(analysis) }
+                    patternAnalyses.forEach { analysis -> PatternResearchCard(analysis, uiLanguage) }
                 }
                 Text(uiText(uiLanguage, "Market Intelligence · market-specific behaviour", "मार्केट इंटेलिजेंस · मार्केट अनुसार व्यवहार", "मार्केट इंटेलिजन्स · मार्केटनुसार वर्तन"), style = MaterialTheme.typography.titleLarge)
                 Text(
@@ -890,7 +890,7 @@ private fun RelabHome(
                     Text(uiText(uiLanguage, "Coverage audit will appear after source data is imported.", "सोर्स डेटा इम्पोर्ट होने पर कवरेज ऑडिट दिखेगा।", "स्रोत डेटा आयात केल्यानंतर कव्हरेज तपासणी दिसेल."))
                 } else {
                     coverageReports.forEach { coverage ->
-                        CoverageReportCard(coverage) { start, end ->
+                        CoverageReportCard(coverage, uiLanguage) { start, end ->
                             val key = "${coverage.market.name}:${coverage.sessionId}"
                             coverageRangeOverrides = coverageRangeOverrides + (key to (start to end))
                             onSaveCoverageRange(key, start, end)
@@ -909,13 +909,13 @@ private fun RelabHome(
                 if (repeatedSourceRecords.isEmpty()) {
                     Text(uiText(uiLanguage, "No repeated source-record IDs found. Records without a source record ID are not guessed or grouped.", "दोहराए गए सोर्स रिकॉर्ड ID नहीं मिले। जिन रिकॉर्ड में ID नहीं है, उनका अनुमान लगाकर समूह नहीं बनाया जाता।", "पुनरावृत्ती झालेले स्रोत-नोंद ID आढळले नाहीत. ID नसलेल्या नोंदींचा अंदाज लावून गट केला जात नाही."))
                 } else {
-                    DuplicateObservationAuditCard(repeatedSourceRecords)
+                    DuplicateObservationAuditCard(repeatedSourceRecords, uiLanguage)
                 }
                 Text(uiText(uiLanguage, "Repeated result across dates · stale archive review", "अलग-अलग तारीखों पर दोहराया परिणाम · पुराने आर्काइव की जांच", "वेगवेगळ्या तारखांवरील पुनरावृत्ती निकाल · जुन्या संग्रहाची तपासणी"), style = MaterialTheme.typography.titleLarge)
                 if (repeatedPublishedResults.isEmpty()) {
                     Text(uiText(uiLanguage, "No identical published result repeated across 3 or more distinct dates by the same source.", "एक ही सोर्स से 3 या अधिक अलग तारीखों पर समान प्रकाशित परिणाम नहीं मिला।", "एकाच स्रोताकडून 3 किंवा अधिक वेगवेगळ्या तारखांना समान प्रकाशित निकाल आढळला नाही."))
                 } else {
-                    RepeatedPublishedResultAuditCard(repeatedPublishedResults)
+                    RepeatedPublishedResultAuditCard(repeatedPublishedResults, uiLanguage)
                 }
                 Text(uiText(uiLanguage, "Publisher-specific chart history", "हर पब्लिशर का अलग चार्ट इतिहास", "प्रत्येक प्रकाशकाचा स्वतंत्र चार्ट इतिहास"), style = MaterialTheme.typography.titleLarge)
                 // A separate chart/history is rendered for every URL. Publisher identity
@@ -1063,7 +1063,7 @@ private fun PublisherCoverageReportCard(
 }
 
 @Composable
-private fun CoverageReportCard(report: CoverageReport, onRangeApply: (LocalDate, LocalDate) -> Unit) {
+private fun CoverageReportCard(report: CoverageReport, uiLanguage: String, onRangeApply: (LocalDate, LocalDate) -> Unit) {
     var startText by remember(report.market, report.sessionId, report.startDate) { mutableStateOf(report.startDate.toString()) }
     var endText by remember(report.market, report.sessionId, report.endDate) { mutableStateOf(report.endDate.toString()) }
     var rangeError by remember(report.market, report.sessionId) { mutableStateOf<String?>(null) }
@@ -1124,7 +1124,7 @@ private fun CoverageReportCard(report: CoverageReport, onRangeApply: (LocalDate,
 
 
 @Composable
-private fun DuplicateObservationAuditCard(groups: List<DuplicateObservationGroup>) {
+private fun DuplicateObservationAuditCard(groups: List<DuplicateObservationGroup>, uiLanguage: String) {
     val changed = groups.count { it.state == DuplicateObservationState.SOURCE_RECORD_CHANGED }
     val unchanged = groups.size - changed
     Card {
@@ -1149,7 +1149,7 @@ private fun DuplicateObservationAuditCard(groups: List<DuplicateObservationGroup
 
 
 @Composable
-private fun RepeatedPublishedResultAuditCard(groups: List<com.relab.core.RepeatedPublishedResultGroup>) {
+private fun RepeatedPublishedResultAuditCard(groups: List<com.relab.core.RepeatedPublishedResultGroup>, uiLanguage: String) {
     Card {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(uiText(uiLanguage, "Review flags: ${groups.size}", "जांच संकेत: ${groups.size}", "तपासणी संकेत: ${groups.size}"))
@@ -1165,7 +1165,7 @@ private fun RepeatedPublishedResultAuditCard(groups: List<com.relab.core.Repeate
 }
 
 @Composable
-private fun PatternResearchCard(analysis: MarketAnalysis) {
+private fun PatternResearchCard(analysis: MarketAnalysis, uiLanguage: String) {
     val openTop = analysis.openFamilySequences.take(3).joinToString { "${it.pattern} (${it.count})" }.ifBlank { "Not enough records" }
     val closeTop = analysis.closeFamilySequences.take(3).joinToString { "${it.pattern} (${it.count})" }.ifBlank { "Not enough records" }
     val openPairs = analysis.openDigitPairPositionCounts.mapIndexed { index, counts ->
