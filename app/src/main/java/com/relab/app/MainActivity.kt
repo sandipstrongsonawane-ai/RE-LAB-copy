@@ -543,7 +543,7 @@ private fun RelabHome(
                             val performance = predictionLedger.performance(key.first, key.second, key.third)
                             Text("${key.first} · ${key.second} · ${key.third}: GREEN ${performance.green} / RED ${performance.red} / GREY ${performance.grey} · verified ${performance.verified}", style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("Recent locked predictions · latest verification", style = MaterialTheme.typography.titleSmall)
+                        Text(uiText(uiLanguage, "Recent locked predictions · latest verification", "हाल के लॉक किए गए रिसर्च · ताज़ा सत्यापन", "अलीकडील लॉक केलेले संशोधन · नवीन पडताळणी"), style = MaterialTheme.typography.titleSmall)
                         predictionLedger.lockedPredictions
                             .sortedWith(compareByDescending<com.relab.core.LockedSidePrediction> { it.targetDate }.thenByDescending { it.lockedAt })
                             .take(20)
@@ -689,7 +689,7 @@ private fun RelabHome(
                             Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text("${source.sourceId} · ${source.market.name}/${source.sessionId}", style = MaterialTheme.typography.titleSmall)
                                 Text(source.url, style = MaterialTheme.typography.bodySmall)
-                                sourceStatuses[source.url]?.let { Text("Last refresh: $it", style = MaterialTheme.typography.bodySmall) }
+                                sourceStatuses[source.url]?.let { Text(uiText(uiLanguage, "Last refresh: $it", "आखिरी रिफ्रेश: $it", "शेवटचे रिफ्रेश: $it"), style = MaterialTheme.typography.bodySmall) }
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     OutlinedButton(onClick = {
                                         editingSourceUrl = source.url
@@ -697,20 +697,20 @@ private fun RelabHome(
                                         sourcePublisherInput = source.sourceId
                                         sourceMarketInput = source.market.name
                                         sourceSessionInput = source.sessionId
-                                    }) { Text("Edit") }
+                                    }) { Text(uiText(uiLanguage, "Edit", "बदलें", "बदला")) }
                                     OutlinedButton(onClick = {
                                         marketSources = UserMarketSourceRegistry.setEnabled(marketSources, source.url, !source.enabled)
                                         onSaveMarketSources(marketSources)
-                                    }) { Text(if (source.enabled) "Disable" else "Enable") }
+                                    }) { Text(if (source.enabled) uiText(uiLanguage, "Disable", "बंद करें", "बंद करा") else uiText(uiLanguage, "Enable", "चालू करें", "सुरू करा")) }
                                     OutlinedButton(onClick = {
                                         marketSources = UserMarketSourceRegistry.remove(marketSources, source.url)
                                         sourceStatuses = sourceStatuses - source.url
                                         onSaveSourceStatuses(sourceStatuses)
                                         onSaveMarketSources(marketSources)
-                                    }) { Text("Remove") }
+                                    }) { Text(uiText(uiLanguage, "Remove", "हटाएं", "काढा")) }
                                     OutlinedButton(enabled = source.enabled && !linkBusy, onClick = {
                                         refreshRegisteredSources(listOf(source), onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
-                                    }) { Text("Refresh") }
+                                    }) { Text(uiText(uiLanguage, "Refresh", "रिफ्रेश", "रिफ्रेश")) }
                                 }
                             }
                         }
