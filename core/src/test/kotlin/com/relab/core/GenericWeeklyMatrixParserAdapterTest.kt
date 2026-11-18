@@ -302,7 +302,7 @@ class GenericWeeklyMatrixParserAdapterTest {
                 "1 6 7 42 2 5 5", "3 4 5 22 1 2 9", "1 5 6 24 4 0 0", "")
         )
         assertEquals("230-59-199", newTimeBazar.observations.first().normalizedResult)
-        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, newTimeBazar.observations.last().status)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, newTimeBazar.observations.last().status)
         assertNotEquals(timeBazar.observations.first().market, newTimeBazar.observations.first().market)
     }
 
