@@ -614,8 +614,8 @@ private fun RelabHome(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (linkBusy) uiText(uiLanguage, "Fetching...", "फेच हो रहा है...", "फेच होत आहे...") else uiText(uiLanguage, "Auto-detect market & fetch", "मार्केट पहचानें और फेच करें", "मार्केट ओळखा आणि फेच करा")) }
-                if (activeSection == "sources") {
                 }
+                if (activeSection == "sources") {
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(uiText(uiLanguage, "Chart source manager", "चार्ट सोर्स मैनेजर", "चार्ट स्रोत व्यवस्थापक"), style = MaterialTheme.typography.titleMedium)
@@ -709,8 +709,8 @@ private fun RelabHome(
                         }
                     }
                 }
-                if (activeSection == "backup") {
                 }
+                if (activeSection == "backup") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { picker.launch(arrayOf("text/*", "text/csv", "application/csv")) }) {
@@ -793,8 +793,8 @@ private fun RelabHome(
                     }
                 }
                 if (analyticsBusy) Text("Updating historical analytics in background…", style = MaterialTheme.typography.bodySmall)
-                if (activeSection == "research") {
                 }
+                if (activeSection == "research") {
                 Text("Pattern research · exploratory + verified", style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Analysis input: ${researchRecords.size} valid historical rows (${chartBuild.records.size} consensus + ${chartBuild.singleSourceUnverifiedGroups.size} single-source groups) · Conflicts excluded: ${chartBuild.conflictGroups.size} · Pending/missing excluded: ${chartBuild.noPublishedResultGroups.size} · Invalid excluded: ${chartBuild.invalidGroups.size}",
@@ -871,8 +871,8 @@ private fun RelabHome(
                 } else {
                     candidateWalkForwardReports.forEach { CandidateWalkForwardCard(it) }
                 }
-                if (activeSection == "audit") {
                 }
+                if (activeSection == "audit") {
                 Text("Historical coverage audit", style = MaterialTheme.typography.titleLarge)
                 if (coverageReports.isEmpty()) {
                     Text("Coverage audit will appear after source data is imported.")
