@@ -83,7 +83,7 @@ object MarketSourceCatalog {
             note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
         ),
         MarketSource(
-            Market.PUNA_BAZAR, "main", "livesattamatka",
+            Market.valueOf("PUNA_BAZAR"), "main", "livesattamatka",
             "https://livesattamatka.net/panna-chart/puna-bazar", "weekly-panel",
             enabled = false,
             note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
