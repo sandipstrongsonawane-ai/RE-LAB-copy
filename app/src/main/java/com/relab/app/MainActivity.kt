@@ -1151,7 +1151,7 @@ private fun MarketNextInsightCard(
                 Text(freshnessLabel, color = freshnessColor, style = MaterialTheme.typography.labelSmall)
             }
             Text("Next active date: ${nextActiveDate()} · History: ${features.size} valid rows")
-            Text("Latest result: ${latestResultDate ?: "—"} · Last source fetch: ${latestRetrievedAt ?: "Never"}", style = MaterialTheme.typography.bodySmall)
+            Text("Latest result date: ${latestResultDate ?: "—"} · Latest successful capture: ${latestRetrievedAt ?: "Never"}", style = MaterialTheme.typography.bodySmall)
             androidx.compose.material3.HorizontalDivider()
             Text("OPEN DIGIT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(openDigit)
             Text("JODI · historical open/close ank pair", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(jodiPattern)
