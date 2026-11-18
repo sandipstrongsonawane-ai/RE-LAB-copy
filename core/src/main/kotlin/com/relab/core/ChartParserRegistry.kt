@@ -251,13 +251,14 @@ object FixResultKalyanWeeklyParserAdapter : ChartParserAdapter {
                 val cellRaw = cells[dayIndex + 1]
                 val raw = "${cells[0]} | ${listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[dayIndex]} | $cellRaw"
                 val compact = cellRaw.replace(Regex("\\s+"), "")
-                if (compact.isBlank() || compact.contains("—") || compact == "-" || compact.equals("holiday", true)) {
+                val markerOnly = compact.replace("*", "")
+                if (compact.isBlank() || markerOnly.matches(Regex("[-—–]+")) || compact.equals("holiday", true)) {
                     observations += SourceObservation(
                         market = market, sessionId = sessionId, date = date,
                         sourceId = "fixresult.in", sourceUrl = pageUrl,
                         sourceRecordId = date.toString(), retrievedAt = retrievedAt,
                         rawText = raw, normalizedResult = null,
-                        status = if (compact.isBlank() || compact.contains("—") || compact == "-")
+                        status = if (compact.isBlank() || markerOnly.matches(Regex("[-—–]+")) )
                             ObservationStatus.MISSING_FROM_SOURCE else ObservationStatus.HOLIDAY_CLOSED
                     )
                     continue
