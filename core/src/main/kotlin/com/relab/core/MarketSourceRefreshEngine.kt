@@ -79,11 +79,7 @@ object MarketSourceRefreshEngine {
             sessionId = source.sessionId, retrievedAt = retrievedAt()
         )
         require(imported.observations.isNotEmpty()) {
-            "UNSUPPORTED: no recognized dated chart rows were found by parser '${'
-        host?.lowercase(Locale.ROOT)?.removePrefix("www.")
-            ?: throw IllegalArgumentException("Source URL host is missing.")
-}
-}{imported.parserId}'. Page may need a site-specific adapter."
+            "UNSUPPORTED: no recognized dated chart rows were found by parser '${imported.parserId}'. Page may need a site-specific adapter."
         }
         SourceRefreshOutcome(
             source = source,
