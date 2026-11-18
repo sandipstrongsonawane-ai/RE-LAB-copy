@@ -16,6 +16,7 @@ internal data class DashboardAnalytics(
     val researchRecords: List<ChartRecord>,
     val patternAnalyses: List<MarketAnalysis>,
     val intelligenceReports: List<MarketIntelligenceReport>,
+    val crossMarketReport: CrossMarketReverseEngineeringReport,
     val candidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
     val sangamResearchSets: List<SangamResearchSet>,
     val sangamWalkForwardReports: List<SangamWalkForwardReport>,
@@ -60,6 +61,9 @@ internal data class DashboardAnalytics(
             val researchRecords = ReconciledChartBuilder.buildExploratoryRecords(observations)
             val patternAnalyses = PatternAnalysis.analyze(researchRecords)
             val intelligenceReports = MarketIntelligence.analyze(researchRecords)
+            val crossMarketReport = CrossMarketReverseEngineering.analyze(
+                researchRecords, minimumOverlap = 20, maxLagDays = 1, permutations = 99
+            )
 
             // Build a home card for every observed or enabled market/session,
             // including markets with no history yet (they must visibly abstain).
@@ -193,6 +197,7 @@ internal data class DashboardAnalytics(
                 researchRecords = researchRecords,
                 patternAnalyses = patternAnalyses,
                 intelligenceReports = intelligenceReports,
+                crossMarketReport = crossMarketReport,
                 candidateSets = candidateSets,
                 sangamResearchSets = sangamResearchSets,
                 sangamWalkForwardReports = sangamWalkForwardReports,
