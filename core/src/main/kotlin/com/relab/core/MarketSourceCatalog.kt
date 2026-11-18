@@ -61,6 +61,33 @@ object MarketSourceCatalog {
             Market.KALYAN_NIGHT, "night", "matkaflash",
             "https://matkaflash.com/kalyan-night/panel-chart", "panel-history"
         ),
+        // livesattamatka.net exposes the same weekly panel matrix format as the
+        // already registered .org site. Keep the shared publisher identity so
+        // these domains cannot falsely count as independent corroboration.
+        MarketSource(
+            Market.SRIDEVI, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/sridevi", "weekly-panel",
+            enabled = false,
+            note = "Verified weekly panel layout; domain relationship to livesattamatka.org is unconfirmed, so grouped under the same publisher identity and disabled pending review."
+        ),
+        MarketSource(
+            Market.KALYAN, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/kalyan", "weekly-panel",
+            enabled = false,
+            note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
+        ),
+        MarketSource(
+            Market.KALYAN_MORNING, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/kalyan-morning", "weekly-panel",
+            enabled = false,
+            note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
+        ),
+        MarketSource(
+            Market.PUNA_BAZAR, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/puna-bazar", "weekly-panel",
+            enabled = false,
+            note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
+        ),
         MarketSource(
             Market.KALYAN, "main", "kalyanchart",
             "https://kalyanchart.cyou/history/", "archive",
