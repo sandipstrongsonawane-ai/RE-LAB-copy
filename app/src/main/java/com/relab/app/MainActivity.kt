@@ -507,7 +507,7 @@ private fun RelabHome(
                         OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text("Market (auto-detect if known; otherwise enter market)") }, placeholder = { Text("SRIDEVI / SRIDEVI_NIGHT / KALYAN / TIME_BAZAR / MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(sourceSessionInput, { sourceSessionInput = it }, label = { Text("Session ID (required if URL is not recognized)") }, placeholder = { Text("main / night / evening") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Button(
-                            enabled = sourceUrlInput.isNotBlank() && sourceSessionInput.isNotBlank() && !linkBusy,
+                            enabled = sourceUrlInput.isNotBlank() && !linkBusy,
                             onClick = {
                                 try {
                                     val uri = java.net.URI(sourceUrlInput.trim())
