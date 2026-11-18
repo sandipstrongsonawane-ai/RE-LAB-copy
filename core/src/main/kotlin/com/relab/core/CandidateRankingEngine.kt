@@ -156,7 +156,11 @@ object CandidateRankingEngine {
         return CandidateRanking(
             market, sessionId, side, targetDate, reconciled.size, minimumHistory,
             false, ranked,
-            "Ranked from prior eligible records only. Score is a relative evidence index, not probability or a guarantee."
+            if (feedback.verifiedPredictions > 0) {
+                "Ranked from prior eligible records plus bounded feedback from ${feedback.verifiedPredictions} earlier verified predictions. Score is a relative evidence index, not probability or a guarantee."
+            } else {
+                "Ranked from prior eligible records only. Score is a relative evidence index, not probability or a guarantee."
+            }
         )
     }
 
