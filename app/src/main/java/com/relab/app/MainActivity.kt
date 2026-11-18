@@ -232,6 +232,7 @@ private fun RelabHome(
     val languagePreferences = remember { context.getSharedPreferences("relab_local", android.content.Context.MODE_PRIVATE) }
     var uiLanguage by remember { mutableStateOf(languagePreferences.getString("ui_language", "hinglish") ?: "hinglish") }
     var activeSection by remember { mutableStateOf("home") }
+    var showLedgerDetails by remember { mutableStateOf(false) }
     var rawCsv by remember { mutableStateOf(initialCsv) }
     var observations by remember { mutableStateOf(initialObservations) }
     var predictionLedger by remember { mutableStateOf(initialPredictionLedger) }
@@ -534,8 +535,9 @@ private fun RelabHome(
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(uiText(uiLanguage, "Self-learning prediction ledger", "सेल्फ-लर्निंग प्रेडिक्शन रिकॉर्ड", "सेल्फ-लर्निंग प्रेडिक्शन नोंद"), style = MaterialTheme.typography.titleMedium)
-                        Text("Locked: ${predictionLedger.lockedPredictions.size} · Verification attempts: ${predictionLedger.verifications.size}")
-                        Text("GREEN/RED only count after independent publisher consensus. GREY checks remain provisional and can be rechecked when newer source evidence arrives.", style = MaterialTheme.typography.bodySmall)
+                        Text(uiText(uiLanguage, "Locked: ${predictionLedger.lockedPredictions.size} · Verification attempts: ${predictionLedger.verifications.size}", "लॉक: ${predictionLedger.lockedPredictions.size} · वेरिफिकेशन प्रयास: ${predictionLedger.verifications.size}", "लॉक: ${predictionLedger.lockedPredictions.size} · पडताळणी प्रयत्न: ${predictionLedger.verifications.size}"))
+                        Text(uiText(uiLanguage, "GREEN/RED count only after independent publisher consensus. GREY stays provisional until newer source evidence arrives.", "GREEN/RED की गिनती स्वतंत्र पब्लिशर की सहमति के बाद ही होती है। नया सोर्स डेटा आने तक GREY अस्थायी रहता है।", "स्वतंत्र प्रकाशकांच्या सहमतीनंतरच GREEN/RED मोजले जातात. नवीन स्रोत डेटा येईपर्यंत GREY तात्पुरते राहते."), style = MaterialTheme.typography.bodySmall)
+                        if (showLedgerDetails) {
                         predictionLedger.lockedPredictions.groupBy { Triple(it.market, it.sessionId, it.side) }.forEach { (key, _) ->
                             val performance = predictionLedger.performance(key.first, key.second, key.third)
                             Text("${key.first} · ${key.second} · ${key.third}: GREEN ${performance.green} / RED ${performance.red} / GREY ${performance.grey} · verified ${performance.verified}", style = MaterialTheme.typography.bodySmall)
@@ -564,6 +566,10 @@ private fun RelabHome(
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
+                        }
+                        OutlinedButton(onClick = { showLedgerDetails = !showLedgerDetails }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (showLedgerDetails) uiText(uiLanguage, "Hide ledger details", "विवरण छिपाएं", "तपशील लपवा") else uiText(uiLanguage, "Show ledger details", "विवरण देखें", "तपशील पहा"))
+                        }
                         Button(
                             enabled = observations.isNotEmpty(),
                             onClick = {
@@ -591,7 +597,7 @@ private fun RelabHome(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Lock next-day research candidates") }
+                        ) { Text(uiText(uiLanguage, "Lock next-day research candidates", "अगले दिन के रिसर्च कैंडिडेट लॉक करें", "पुढील दिवसाचे संशोधन उमेदवार लॉक करा")) }
                     }
                 }
                 OutlinedTextField(
@@ -619,7 +625,7 @@ private fun RelabHome(
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(uiText(uiLanguage, "Chart source manager", "चार्ट सोर्स मैनेजर", "चार्ट स्रोत व्यवस्थापक"), style = MaterialTheme.typography.titleMedium)
-                        Text("Har saved URL ka apna source history rahega. Same publisher ke multiple pages ek hi evidence identity use karenge.")
+                        Text(uiText(uiLanguage, "Each saved URL keeps its own history. Multiple pages from one publisher share one evidence identity.", "हर सेव URL का अपना इतिहास रहेगा। एक पब्लिशर के कई पेज एक ही सोर्स पहचान साझा करेंगे।", "प्रत्येक सेव केलेल्या URL चा स्वतंत्र इतिहास राहील. एका प्रकाशकाची अनेक पाने एकच स्रोत ओळख वापरतील."))
                         OutlinedTextField(sourceUrlInput, { sourceUrlInput = it }, label = { Text(uiText(uiLanguage, "Chart URL (HTTPS)", "चार्ट URL (HTTPS)", "चार्ट URL (HTTPS)")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(sourcePublisherInput, { sourcePublisherInput = it }, label = { Text(uiText(uiLanguage, "Publisher identity (same name across its pages)", "पब्लिशर की पहचान (उसके सभी पेज पर एक ही नाम)", "प्रकाशक ओळख (त्याच्या सर्व पेजवर एकच नाव)")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text(uiText(uiLanguage, "Market (auto-detect if known; otherwise enter market)", "मार्केट (पहचान न हो तो नाम डालें)", "मार्केट (ओळखले नाही तर नाव भरा)")) }, placeholder = { Text("SRIDEVI / SRIDEVI_NIGHT / KALYAN / TIME_BAZAR / MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
