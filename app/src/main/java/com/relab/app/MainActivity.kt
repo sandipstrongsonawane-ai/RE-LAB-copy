@@ -434,7 +434,8 @@ private fun RelabHome(
         if (uri != null) {
             try {
                 val bundle = ResearchBundleExporter.export(
-                    observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now(), predictionLedger
+                    observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now(), predictionLedger,
+                    crossMarketReport
                 )
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bundle) }
                     ?: error("Research bundle file could not be written")
