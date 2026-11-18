@@ -555,6 +555,10 @@ private fun RelabHome(
                             else -> "DAY / MAIN MARKET"
                         }
                         val latest = researchRecords.filter { it.market == market && it.sessionId == open.sessionId }.maxByOrNull { it.date }
+                        val latestStatus = latest?.let { row ->
+                            groups.firstOrNull { it.market == market && it.sessionId == open.sessionId && it.date == row.date }?.state?.name
+                                ?: "UNRECONCILED"
+                        } ?: "NO ROW"
                         val pattern = patternAnalyses.firstOrNull { it.market == market && it.sessionId == open.sessionId }
                         val intelligence = intelligenceReports.firstOrNull { it.market == market && it.sessionId == open.sessionId }
                         val openDigits = open.candidates.groupBy { it.panna.sumOf(Char::digitToInt) % 10 }
@@ -595,7 +599,7 @@ private fun RelabHome(
                                     intelligence?.let { "Pattern shift: ${it.regime} · ${it.explanation}" } ?: "Pattern shift: more historical rows needed",
                                     style = MaterialTheme.typography.bodySmall
                                 )
-                                Text("Source status: ${if (latest == null) "NO ROW" else "Exploratory latest row"} · Candidate index probability nahi hai; result guarantee nahi.", style = MaterialTheme.typography.labelSmall)
+                                Text("Latest row check: ${latestStatus} · Candidate index probability nahi hai; result guarantee nahi.", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
