@@ -40,6 +40,19 @@ class UserMarketSourceRegistryTest {
         assertEquals(listOf(second), UserMarketSourceRegistry.remove(both, first.url))
     }
 
+
+    @Test fun editCanChangeUrlPublisherMarketAndSession() {
+        val original = source("https://publisher.example/old")
+        val updated = source("https://newpublisher.example/chart", "new-publisher", Market.KALYAN)
+            .copy(sessionId = "evening", enabled = false)
+        val result = UserMarketSourceRegistry.update(listOf(original), original.url, updated)
+        assertEquals(1, result.size)
+        assertEquals("new-publisher", result.single().sourceId)
+        assertEquals(Market.KALYAN, result.single().market)
+        assertEquals("evening", result.single().sessionId)
+        assertFalse(result.single().enabled)
+    }
+
     @Test fun rejectsHttpAndCredentialBearingUrls() {
         listOf("http://publisher.example/chart", "https://user:pass@publisher.example/chart").forEach { url ->
             try {
