@@ -36,7 +36,7 @@ data class CandidateRanking(
 /**
  * Transparent, descriptive candidate ranking. Input is source observations, not raw
  * ChartRecords, so reconciliation is enforced here. No future rows or unverified
- * single-source observations enter the ranking.
+ * single-source observations enter the ranking unless exploration is explicitly enabled.
  */
 object CandidateRankingEngine {
     fun rank(
@@ -58,7 +58,29 @@ object CandidateRankingEngine {
         } else {
             ReconciledChartBuilder.build(observations).records
         }
-        val reconciled = sourceRecords
+        return rankRecords(
+            sourceRecords, market, sessionId, targetDate, side, limit, minimumHistory
+        )
+    }
+
+    /**
+     * Fast path for chronological evaluators that have already reconciled the source
+     * ledger once. The supplied records are still filtered strictly before targetDate.
+     */
+    internal fun rankRecords(
+        records: List<ChartRecord>,
+        market: Market,
+        sessionId: String,
+        targetDate: LocalDate,
+        side: PannaSide,
+        limit: Int = 10,
+        minimumHistory: Int = 5
+    ): CandidateRanking {
+        require(sessionId.isNotBlank()) { "Session ID is required" }
+        require(limit in 1..100) { "Candidate limit must be between 1 and 100" }
+        require(minimumHistory >= 1) { "Minimum history must be at least 1" }
+
+        val reconciled = records
             .filter { it.market == market && it.sessionId == sessionId && it.date.isBefore(targetDate) }
             .sortedBy { it.date }
         require(reconciled.map { it.date }.distinct().size == reconciled.size) {
@@ -69,11 +91,12 @@ object CandidateRankingEngine {
             return CandidateRanking(
                 market, sessionId, side, targetDate, reconciled.size, minimumHistory,
                 true, emptyList(),
-                if (allowSingleSourceExploration) "Insufficient history: need $minimumHistory earlier valid published records; found ${reconciled.size}." else "Insufficient verified history: need $minimumHistory multi-source consensus records; found ${reconciled.size}."
+                "Insufficient history: need $minimumHistory earlier eligible records; found ${reconciled.size}."
             )
         }
 
-        val pannaOf: (ChartRecord) -> String = if (side == PannaSide.OPEN) ({ it.openPanna }) else ({ it.closePanna })
+        val pannaOf: (ChartRecord) -> String =
+            if (side == PannaSide.OPEN) ({ it.openPanna }) else ({ it.closePanna })
         val history = reconciled.map(pannaOf)
         val families = history.map(::familySequence)
         val weekdayFamilies = reconciled.indices
@@ -120,7 +143,7 @@ object CandidateRankingEngine {
         return CandidateRanking(
             market, sessionId, side, targetDate, reconciled.size, minimumHistory,
             false, ranked,
-            "Ranked from prior multi-source consensus only. Score is a relative evidence index, not probability or a guarantee."
+            "Ranked from prior eligible records only. Score is a relative evidence index, not probability or a guarantee."
         )
     }
 
