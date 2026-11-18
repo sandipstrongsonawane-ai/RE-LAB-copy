@@ -54,13 +54,15 @@ class MarketSourceCatalogTest {
 
     @Test fun livesattamatkaNetArchivesAreEnabledButSharePublisherIdentity() {
         val netSources = MarketSourceCatalog.sources.filter { it.url.contains("livesattamatka.net") }
-        assertEquals(9, netSources.size)
+        assertEquals(14, netSources.size)
         assertTrue(netSources.all { it.enabled && it.sourceId == "livesattamatka" })
         assertEquals(
             setOf(
                 Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.valueOf("PUNA_BAZAR"),
                 Market.TIME_BAZAR, Market.MAIN_BAZAR, Market.MAIN_BAZAR_NIGHT,
-                Market.TIME_BAZAR_DAY, Market.NEW_TIME_BAZAR
+                Market.TIME_BAZAR_DAY, Market.NEW_TIME_BAZAR,
+                Market.CB, Market.MAIN_RATAN, Market.SUNDAY_BAZAR,
+                Market.GEETA_MORNING, Market.MAIN_BAZAR_MORNING
             ),
             netSources.map { it.market }.toSet()
         )
@@ -89,6 +91,23 @@ class MarketSourceCatalogTest {
             java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY,
             java.time.DayOfWeek.FRIDAY
         ), Market.MAIN_BAZAR.activeDays)
+    }
+
+    @Test fun includesFiveMoreVerifiedWeeklyMarketArchives() {
+        val expected = mapOf(
+            Market.CB to "https://livesattamatka.net/panna-chart/cb",
+            Market.MAIN_RATAN to "https://livesattamatka.net/panna-chart/main-ratan",
+            Market.SUNDAY_BAZAR to "https://livesattamatka.net/panna-chart/sunday-bazar",
+            Market.GEETA_MORNING to "https://livesattamatka.net/panna-chart/geeta-morning",
+            Market.MAIN_BAZAR_MORNING to "https://livesattamatka.net/panna-chart/main-bazar-morning"
+        )
+        expected.forEach { (market, url) ->
+            val source = MarketSourceCatalog.enabledFor(market).single()
+            assertEquals(url, source.url)
+            assertEquals("livesattamatka", source.sourceId)
+        }
+        assertTrue(Market.MAIN_RATAN.activeDays.none { it == java.time.DayOfWeek.SATURDAY || it == java.time.DayOfWeek.SUNDAY })
+        assertNotEquals(Market.MAIN_BAZAR, Market.MAIN_BAZAR_MORNING)
     }
 
     @Test fun sourceLookupUsesExactRegisteredUrl() {
