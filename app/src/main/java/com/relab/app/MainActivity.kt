@@ -1046,7 +1046,9 @@ private fun refreshRegisteredSources(
     updateBusy(true)
     updateMessage("Refreshing ${sources.size} registered ${market.name} publishers sequentially…")
     Thread {
-        val report = com.relab.core.MarketSourceRefreshEngine.refresh(sources) { source ->
+        val report = com.relab.core.MarketSourceRefreshEngine.refresh(
+            sources = sources,
+            fetch = { source ->
             val connection = URL(source.url).openConnection() as HttpURLConnection
             connection.instanceFollowRedirects = true
             connection.connectTimeout = 15000
@@ -1066,7 +1068,9 @@ private fun refreshRegisteredSources(
             } finally {
                 connection.disconnect()
             }
-        }
+            },
+            retrievedAt = { java.time.Instant.now() }
+        )
         mainHandler.post {
             try {
                 val extracted = report.observations
