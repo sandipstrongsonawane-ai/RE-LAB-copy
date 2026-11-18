@@ -204,6 +204,7 @@ private fun RelabHome(
     var sourcePublisherInput by remember { mutableStateOf("") }
     var sourceMarketInput by remember { mutableStateOf("SRIDEVI") }
     var sourceSessionInput by remember { mutableStateOf("main") }
+    var editingSourceUrl by remember { mutableStateOf<String?>(null) }
     var linkBusy by remember { mutableStateOf(false) }
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) {
@@ -497,16 +498,27 @@ private fun RelabHome(
                                         .lowercase().replace(Regex("[^a-z0-9.-]+"), "-").trim('-')
                                     val market = com.relab.core.Market.valueOf(sourceMarketInput.trim().uppercase())
                                     val source = MarketSource(market, sourceSessionInput.trim(), publisher, sourceUrlInput.trim(), "user-added")
-                                    marketSources = UserMarketSourceRegistry.add(marketSources, source)
+                                    marketSources = if (editingSourceUrl == null) {
+                                        UserMarketSourceRegistry.add(marketSources, source)
+                                    } else {
+                                        UserMarketSourceRegistry.update(marketSources, editingSourceUrl!!, source)
+                                    }
                                     onSaveMarketSources(marketSources)
+                                    editingSourceUrl = null
                                     sourceUrlInput = ""
-                                    importMessage = "Source registered. Parser support will be checked on refresh; unsupported pages remain marked, no chart will be fabricated."
+                                    sourcePublisherInput = ""
+                                    sourceMarketInput = "SRIDEVI"
+                                    sourceSessionInput = "main"
+                                    importMessage = "Source saved. Parser support will be checked on refresh; unsupported pages remain marked, no chart will be fabricated."
                                 } catch (error: Exception) {
                                     importMessage = "Source not added: ${error.message ?: "Check URL, publisher, market and session."}"
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Add chart source") }
+                        ) { Text(if (editingSourceUrl == null) "Add chart source" else "Save source changes") }
+                        if (editingSourceUrl != null) {
+                            OutlinedButton(onClick = { editingSourceUrl = null; sourceUrlInput = ""; sourcePublisherInput = "" }) { Text("Cancel edit") }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 enabled = !linkBusy && marketSources.any { it.enabled },
@@ -522,6 +534,13 @@ private fun RelabHome(
                                 Text("${source.sourceId} · ${source.market.name}/${source.sessionId}", style = MaterialTheme.typography.titleSmall)
                                 Text(source.url, style = MaterialTheme.typography.bodySmall)
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    OutlinedButton(onClick = {
+                                        editingSourceUrl = source.url
+                                        sourceUrlInput = source.url
+                                        sourcePublisherInput = source.sourceId
+                                        sourceMarketInput = source.market.name
+                                        sourceSessionInput = source.sessionId
+                                    }) { Text("Edit") }
                                     OutlinedButton(onClick = {
                                         marketSources = UserMarketSourceRegistry.setEnabled(marketSources, source.url, !source.enabled)
                                         onSaveMarketSources(marketSources)
@@ -717,6 +736,25 @@ private fun RelabHome(
                     Text("No identical published result repeated across 3 or more distinct dates by the same source.")
                 } else {
                     RepeatedPublishedResultAuditCard(repeatedPublishedResults)
+                }
+                Text("Publisher-specific chart history", style = MaterialTheme.typography.titleLarge)
+                val sourceChartGroups = observations.groupBy { Triple(it.sourceId, it.market, it.sessionId) }
+                    .toList().sortedWith(compareBy({ it.first.second.name }, { it.first.third }, { it.first.first }))
+                if (sourceChartGroups.isEmpty()) {
+                    Text("Each registered publisher's chart history will appear here after supported rows are fetched.")
+                } else {
+                    sourceChartGroups.forEach { (identity, rows) ->
+                        Card {
+                            Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("${identity.first} · ${identity.second.name}/${identity.third}", style = MaterialTheme.typography.titleSmall)
+                                Text("${rows.size} source rows · ${rows.map { it.date }.distinct().size} distinct dates · latest ${rows.maxOf { it.date }}", style = MaterialTheme.typography.bodySmall)
+                                rows.sortedByDescending { it.date }.take(12).forEach { row ->
+                                    Text("${row.date}: ${row.normalizedResult ?: row.rawText} · ${row.status}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                if (rows.size > 12) Text("Showing latest 12 of ${rows.size} rows.", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
                 }
                 Text("Recent source observations", style = MaterialTheme.typography.titleLarge)
                 if (groups.isEmpty()) {
