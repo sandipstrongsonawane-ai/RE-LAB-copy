@@ -51,6 +51,23 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertTrue(parsed.issues.isNotEmpty())
     }
 
+    @Test fun treatsAllStarPlaceholdersAsMissingRatherThanMalformed() {
+        val html = """
+            <table>
+              <tr><th>Date Range</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>
+              <tr><td>16/11/2026 to 21/11/2026</td><td>********</td><td>**</td><td>—</td><td>123-65-456</td><td>—</td><td>—</td></tr>
+            </table>
+        """.trimIndent()
+        val parsed = GenericWeeklyMatrixParserAdapter.parse(
+            html, "https://publisher.test/kalyan", Market.KALYAN, "main", retrievedAt
+        )
+        assertEquals(6, parsed.observations.size)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, parsed.observations[0].status)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, parsed.observations[1].status)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, parsed.observations[2].status)
+        assertEquals(ObservationStatus.PUBLISHED, parsed.observations[3].status)
+    }
+
     @Test fun refusesUnrecognizedHeadersAndDoesNotInventDateRows() {
         val html = "<table><tr><th>Date</th><th>Result</th></tr><tr><td>16-11-2026</td><td>12365456</td></tr></table>"
         assertFalse(GenericWeeklyMatrixParserAdapter.supports(html, "https://publisher.test/chart"))
