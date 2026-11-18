@@ -14,7 +14,7 @@ class MarketRegimeChangeCsvExporterTest {
         val csv = MarketRegimeChangeCsvExporter.export(listOf(finding))
         assertTrue(csv.startsWith(MarketRegimeChangeCsvExporter.HEADER + "\n"))
         assertTrue(csv.contains("\"Recent shift, review weights\nnot a forecast\""))
-        assertTrue(csv.contains("SRIDEVI,"))
+        assertTrue(csv.contains("\"SRIDEVI\""))
         assertTrue(csv.contains("SHIFT_DETECTED"))
     }
 
