@@ -130,10 +130,17 @@ class MarketSourceCatalogTest {
 
     @Test fun newlyDiscoveredLongRangeArchivesRemainDisabledUntilFixtureAudit() {
         val candidates = MarketSourceCatalog.sources.filter {
-            it.sourceId in setOf("dlbosss", "realmatka", "ratan567official")
+            it.sourceId in setOf(
+                "dlbosss", "realmatka", "ratan567official",
+                "matkapulse", "playmatka", "matkafun"
+            )
         }
-        assertEquals(3, candidates.size)
+        assertEquals(6, candidates.size)
         assertTrue(candidates.none { it.enabled })
+        val srideviPair = candidates.filter { it.sourceId in setOf("matkapulse", "playmatka") }
+        assertEquals(setOf(Market.SRIDEVI), srideviPair.map { it.market }.toSet())
+        assertTrue(srideviPair.all { it.sessionId == "main" })
+        assertTrue(srideviPair.all { it.note.contains("overlap") || it.note.contains("mirror") })
         assertEquals(5, MarketSourceCatalog.enabledFor(Market.SRIDEVI).size)
         assertEquals(4, MarketSourceCatalog.enabledFor(Market.KALYAN).size)
     }
