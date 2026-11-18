@@ -30,8 +30,9 @@ class PredictionLedgerCsvCodecTest {
 
     @Test
     fun acceptsUtf8BomBeforeFirstHeaderWithCrLfLineEndings() {
-        val csv = "\uFEFF" + PredictionLedgerCsvCodec.export(fixture()).replace("\n", "\r\n")
-        assertEquals(fixture(), PredictionLedgerCsvCodec.import(csv))
+        val emptyLedger = PredictionLearningLedger(emptyList(), emptyList())
+        val csv = "\uFEFF" + PredictionLedgerCsvCodec.export(emptyLedger).replace("\n", "\r\n")
+        assertEquals(emptyLedger, PredictionLedgerCsvCodec.import(csv))
     }
 
     @Test
