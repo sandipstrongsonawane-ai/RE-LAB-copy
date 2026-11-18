@@ -294,14 +294,14 @@ private fun RelabHome(
     var coverageRangeOverrides by remember { mutableStateOf(initialCoverageRanges) }
     var dashboardAnalytics by remember { mutableStateOf<DashboardAnalytics?>(null) }
     var analyticsBusy by remember { mutableStateOf(false) }
-    LaunchedEffect(observations, coverageRangeOverrides) {
+    LaunchedEffect(observations, coverageRangeOverrides, marketSources) {
         val snapshot = observations
         val ranges = coverageRangeOverrides
         dashboardAnalytics = null
         analyticsBusy = true
         try {
             dashboardAnalytics = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                DashboardAnalytics.compute(snapshot, ranges)
+                DashboardAnalytics.compute(snapshot, ranges, marketSources)
             }
         } catch (error: Exception) {
             importMessage = "Research analysis failed: ${error.message ?: "Unknown error"}"
@@ -369,6 +369,7 @@ private fun RelabHome(
     }
 
     val coverageReports = dashboardAnalytics?.coverageReports.orEmpty()
+    val publisherCoverageReports = dashboardAnalytics?.publisherCoverageReports.orEmpty()
 
     val sourceTiming = dashboardAnalytics?.sourceTiming.orEmpty()
     val timingExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
@@ -779,6 +780,14 @@ private fun RelabHome(
                         }
                     }
                 }
+                Text("Per-URL publisher coverage", style = MaterialTheme.typography.titleLarge)
+                if (publisherCoverageReports.isEmpty()) {
+                    Text("Add a chart URL to start tracking date-wise coverage for each publisher URL.")
+                } else {
+                    publisherCoverageReports.forEach { coverage ->
+                        PublisherCoverageReportCard(coverage)
+                    }
+                }
                 Text("Repeated source-record audit", style = MaterialTheme.typography.titleLarge)
                 if (repeatedSourceRecords.isEmpty()) {
                     Text("No repeated source-record IDs found. Records without a source record ID are not guessed or grouped.")
@@ -864,6 +873,54 @@ private fun CandidateWalkForwardCard(report: com.relab.core.CandidateWalkForward
             Text(report.warning, color = if (report.evaluatedDates < 30) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
             Text(
                 "Historical sample performance only—not future probability, advice, or a guarantee. Candidate exposure and exact hits are counted separately.",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun PublisherCoverageReportCard(report: com.relab.core.PublisherCoverageReport) {
+    val byUrl = report.days.groupBy { it.sourceId to it.sourceUrl }
+    Card {
+        Column(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text("${report.market} · ${report.sessionId}", style = MaterialTheme.typography.titleMedium)
+            Text("Range: ${report.startDate} → ${report.endDate} · Trading days: ${report.expectedTradingDays}")
+            Text("Registered URLs: ${report.registeredUrlCount} · Expected URL/date entries: ${report.expectedUrlDateEntries}")
+            Text("Published URL/date entries: ${report.publishedEntries} · No row: ${report.noRowEntries} · Malformed: ${report.malformedEntries}")
+            byUrl.forEach { (identity, days) ->
+                val published = days.count {
+                    it.state == com.relab.core.PublisherDateState.PUBLISHED ||
+                        it.state == com.relab.core.PublisherDateState.MULTIPLE_PUBLISHED_VALUES
+                }
+                val gaps = days.filter { it.state == com.relab.core.PublisherDateState.NO_ROW }
+                val label = when {
+                    gaps.isEmpty() -> "No unfilled dates"
+                    else -> "No row on ${gaps.size} trading dates"
+                }
+                Text("${identity.first} · ${published}/${days.size} dates published", style = MaterialTheme.typography.titleSmall)
+                Text(identity.second, style = MaterialTheme.typography.bodySmall)
+                Text(label, style = MaterialTheme.typography.bodySmall)
+                days.filter { it.state != com.relab.core.PublisherDateState.PUBLISHED }
+                    .takeLast(6).asReversed().forEach { day ->
+                        val state = when (day.state) {
+                            com.relab.core.PublisherDateState.PUBLISHED -> "PUBLISHED"
+                            com.relab.core.PublisherDateState.MULTIPLE_PUBLISHED_VALUES -> "CONFLICTING ROWS"
+                            com.relab.core.PublisherDateState.PENDING -> "PENDING"
+                            com.relab.core.PublisherDateState.HOLIDAY_REPORTED -> "HOLIDAY"
+                            com.relab.core.PublisherDateState.SOURCE_MISSING_REPORTED -> "SOURCE MARKED MISSING"
+                            com.relab.core.PublisherDateState.MALFORMED -> "MALFORMED"
+                            com.relab.core.PublisherDateState.NO_ROW -> "NO ROW"
+                        }
+                        Text("${day.date} · $state", style = MaterialTheme.typography.labelSmall)
+                    }
+            }
+            Text(
+                "Coverage is tracked per exact registered URL. NO ROW means no matching record was imported; it is not automatically a holiday or proof the publisher omitted the result.",
                 style = MaterialTheme.typography.labelSmall
             )
         }
