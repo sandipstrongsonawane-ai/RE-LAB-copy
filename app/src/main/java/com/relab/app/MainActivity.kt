@@ -1291,13 +1291,23 @@ private fun HomeReverseEngineeringCard(
     uiLanguage: String
 ) {
     if (analysis == null) return
+    val familyLabels = listOf("0/5", "1/6", "2/7", "3/8", "4/9")
+    fun familySequenceLabel(sequence: String): String {
+        if (sequence.length != 3 || sequence.any { it !in '0'..'4' }) return sequence
+        return sequence.map { familyLabels[it.digitToInt()] }.joinToString("–")
+    }
     fun topCounts(items: List<com.relab.core.PatternCount>, limit: Int = 3): String =
         items.take(limit).joinToString(" · ") { "${it.pattern} ×${it.count} (${"%.1f".format(it.percentage)}%)" }
             .ifBlank { "Abhi enough evidence nahi" }
     fun topSequenceTransitions(values: Map<String, Int>): String =
         values.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-            .take(3).joinToString(" · ") { "${it.key} ×${it.value}" }
-            .ifBlank { "Not enough consecutive panna rows" }
+            .take(3).joinToString(" · ") { entry ->
+                val parts = entry.key.split('>')
+                val readable = if (parts.size == 2) {
+                    "${familySequenceLabel(parts[0])} → ${familySequenceLabel(parts[1])}"
+                } else entry.key
+                "$readable ×${entry.value}"
+            }.ifBlank { "Not enough consecutive panna rows" }
     fun topPositions(items: List<Map<Int, Int>>): String =
         items.mapIndexed { index, values ->
             val top = values.entries.sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key })
@@ -1341,7 +1351,6 @@ private fun HomeReverseEngineeringCard(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(uiText(uiLanguage, "   Close: ", "   क्लोज: ", "   क्लोज: ") + topCounts(analysis.closeFamilySequences, 2), style = MaterialTheme.typography.bodySmall)
-            val familyLabels = listOf("0/5", "1/6", "2/7", "3/8", "4/9")
             @Composable fun TransitionMatrix(title: String, matrix: List<List<Int>>) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(title, style = MaterialTheme.typography.labelMedium)
