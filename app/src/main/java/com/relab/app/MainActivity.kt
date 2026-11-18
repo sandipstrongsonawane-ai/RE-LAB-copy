@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -169,6 +170,9 @@ class MainActivity : ComponentActivity() {
                 },
                 initialCsv = database.loadOriginalCsv(),
                 initialObservations = database.loadObservations(),
+                initialPredictionLedger = database.loadPredictionLedger(),
+                onSaveLockedPrediction = { database.appendLockedPrediction(it) },
+                onSavePredictionVerification = { database.appendPredictionVerification(it) },
                 onSaveCsv = { csv, observations ->
                     require(observations.isNotEmpty()) { "No valid source observations to save" }
                     database.appendDataset(csv, observations)
@@ -204,6 +208,9 @@ private fun RelabHome(
     onSaveSourceStatuses: (Map<String, String>) -> Unit,
     initialCsv: String?,
     initialObservations: List<com.relab.core.SourceObservation>,
+    initialPredictionLedger: com.relab.core.PredictionLearningLedger,
+    onSaveLockedPrediction: (com.relab.core.LockedSidePrediction) -> Unit,
+    onSavePredictionVerification: (com.relab.core.PredictionVerification) -> Unit,
     initialCoverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
     onSaveCoverageRange: (String, LocalDate, LocalDate) -> Unit,
     onSaveCsv: (String, List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
@@ -213,6 +220,7 @@ private fun RelabHome(
     val context = LocalContext.current
     var rawCsv by remember { mutableStateOf(initialCsv) }
     var observations by remember { mutableStateOf(initialObservations) }
+    var predictionLedger by remember { mutableStateOf(initialPredictionLedger) }
     var importMessage by remember { mutableStateOf<String?>(null) }
     var chartUrl by remember { mutableStateOf("") }
     var marketSources by remember { mutableStateOf(initialMarketSources) }
@@ -253,6 +261,29 @@ private fun RelabHome(
                 }
             } catch (error: Exception) {
                 importMessage = "CSV read/import error: ${error.message ?: "Unknown error"}"
+            }
+        }
+    }
+
+    LaunchedEffect(observations, predictionLedger) {
+        predictionLedger.lockedPredictions.forEach { prediction ->
+            val latest = predictionLedger.verifications.filter { it.predictionId == prediction.id }
+                .maxByOrNull { it.attempt }
+            val targetRows = observations.filter {
+                it.market == prediction.market && it.sessionId == prediction.sessionId &&
+                    it.date == prediction.targetDate && it.status == ObservationStatus.PUBLISHED
+            }
+            val freshEvidence = targetRows.any { row -> latest == null || row.retrievedAt.isAfter(latest.verifiedAt) }
+            if (targetRows.isNotEmpty() && freshEvidence && (latest == null || latest.grade == com.relab.core.PredictionGrade.GREY)) {
+                runCatching {
+                    val (updated, verification) = com.relab.core.PredictionLearningCycle.verify(
+                        predictionLedger, prediction.id, observations, java.time.Instant.now()
+                    )
+                    onSavePredictionVerification(verification)
+                    predictionLedger = updated
+                }.onFailure { error ->
+                    importMessage = "Prediction verification pending: ${error.message ?: "storage/reconciliation error"}"
+                }
             }
         }
     }
@@ -478,6 +509,45 @@ private fun RelabHome(
                 Text("RE-LAB", style = MaterialTheme.typography.headlineLarge)
                 Text("5 markets · Offline chart research", style = MaterialTheme.typography.titleMedium)
                 Text("Paste any supported chart URL. RE-LAB detects the market from its exact source path.")
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Self-learning prediction ledger", style = MaterialTheme.typography.titleMedium)
+                        Text("Locked: ${predictionLedger.lockedPredictions.size} · Verification attempts: ${predictionLedger.verifications.size}")
+                        Text("GREEN/RED only count after independent publisher consensus. GREY checks remain provisional and can be rechecked when newer source evidence arrives.", style = MaterialTheme.typography.bodySmall)
+                        predictionLedger.lockedPredictions.groupBy { Triple(it.market, it.sessionId, it.side) }.forEach { (key, _) ->
+                            val performance = predictionLedger.performance(key.first, key.second, key.third)
+                            Text("${key.first} · ${key.second} · ${key.third}: GREEN ${performance.green} / RED ${performance.red} / GREY ${performance.grey} · verified ${performance.verified}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Button(
+                            enabled = observations.isNotEmpty(),
+                            onClick = {
+                                val target = LocalDate.now().plusDays(1)
+                                var updated = predictionLedger
+                                var lockedCount = 0
+                                val groups = observations.map { it.market to it.sessionId }.distinct()
+                                groups.forEach { (market, session) ->
+                                    listOf(com.relab.core.PannaSide.OPEN, com.relab.core.PannaSide.CLOSE).forEach { side ->
+                                        runCatching {
+                                            val (next, prediction) = com.relab.core.PredictionLearningCycle.lock(
+                                                observations, market, session, target, side, java.time.Instant.now(), updated
+                                            )
+                                            onSaveLockedPrediction(prediction)
+                                            updated = next
+                                            lockedCount++
+                                        }
+                                    }
+                                }
+                                predictionLedger = updated
+                                importMessage = if (lockedCount > 0) {
+                                    "Locked $lockedCount next-day research candidates before outcome publication."
+                                } else {
+                                    "No new prediction locked: history may be insufficient, target results may already exist, or predictions are already locked."
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Lock next-day research candidates") }
+                    }
+                }
                 OutlinedTextField(
                     value = chartUrl,
                     onValueChange = { chartUrl = it },
