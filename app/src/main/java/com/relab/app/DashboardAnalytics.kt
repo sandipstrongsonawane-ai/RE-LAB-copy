@@ -18,6 +18,7 @@ internal data class DashboardAnalytics(
     val intelligenceReports: List<MarketIntelligenceReport>,
     val crossMarketReport: CrossMarketReverseEngineeringReport,
     val regimeChangeFindings: List<RegimeChangeFinding>,
+    val weekdayPatternFindings: List<WeekdayPatternFinding>,
     val candidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
     val sangamResearchSets: List<SangamResearchSet>,
     val sangamWalkForwardReports: List<SangamWalkForwardReport>,
@@ -69,6 +70,10 @@ internal data class DashboardAnalytics(
             // let exploratory single-source rows trigger a regime-shift flag.
             val regimeChangeFindings = MarketRegimeChangeDetector.analyze(
                 chartBuild.records, windowSize = 20, permutations = 499
+            )
+            // Weekday association is evaluated only on validated multi-source consensus rows.
+            val weekdayPatternFindings = WeekdayPatternAnalyzer.analyze(
+                chartBuild.records, permutations = 499, minimumRecords = 30, minimumActiveWeekdays = 3
             )
 
             // Build a home card for every observed or enabled market/session,
@@ -205,6 +210,7 @@ internal data class DashboardAnalytics(
                 intelligenceReports = intelligenceReports,
                 crossMarketReport = crossMarketReport,
                 regimeChangeFindings = regimeChangeFindings,
+                weekdayPatternFindings = weekdayPatternFindings,
                 candidateSets = candidateSets,
                 sangamResearchSets = sangamResearchSets,
                 sangamWalkForwardReports = sangamWalkForwardReports,

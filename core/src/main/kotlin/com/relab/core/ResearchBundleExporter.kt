@@ -18,7 +18,8 @@ object ResearchBundleExporter {
         predictionLedger: PredictionLearningLedger = PredictionLearningLedger(),
         crossMarketReport: CrossMarketReverseEngineeringReport? = null,
         candidateWalkForwardReports: List<CandidateWalkForwardReport> = emptyList(),
-        regimeChangeFindings: List<RegimeChangeFinding> = emptyList()
+        regimeChangeFindings: List<RegimeChangeFinding> = emptyList(),
+        weekdayPatternFindings: List<WeekdayPatternFinding> = emptyList()
     ): ByteArray {
         val artifacts = linkedMapOf(
             "source-observations.csv" to SourceCsvExporter.export(observations),
@@ -27,6 +28,7 @@ object ResearchBundleExporter {
             "cross-market-associations.csv" to CrossMarketAssociationCsvExporter.export(crossMarketReport),
             "candidate-walk-forward-audit.csv" to CandidateWalkForwardCsvExporter.export(candidateWalkForwardReports),
             "market-regime-change-audit.csv" to MarketRegimeChangeCsvExporter.export(regimeChangeFindings),
+            "weekday-pattern-audit.csv" to WeekdayPatternCsvExporter.export(weekdayPatternFindings),
             "historical-coverage-audit.csv" to CoverageCsvExporter.export(coverageReports),
             "source-publication-timing.csv" to SourceTimingAnalytics.exportCsv(observations),
             "prediction-learning-ledger.csv" to PredictionLedgerCsvCodec.export(predictionLedger),
@@ -80,6 +82,7 @@ object ResearchBundleExporter {
         appendLine("- cross-market-associations.csv: dated market/session associations with lag, overlap, mutual information and adjusted p-value")
         appendLine("- candidate-walk-forward-audit.csv: chronological strict-consensus and explicitly exploratory baseline/learning metrics")
         appendLine("- market-regime-change-audit.csv: recent-vs-previous window distribution shifts with permutation p-values and within-session q-values")
+        appendLine("- weekday-pattern-audit.csv: weekday-feature association findings, minimum-history abstentions, permutation p-values and within-session q-values")
         appendLine("- historical-coverage-audit.csv: expected-day coverage states")
         appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")
         appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")

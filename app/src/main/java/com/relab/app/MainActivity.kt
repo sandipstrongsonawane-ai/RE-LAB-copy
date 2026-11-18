@@ -355,6 +355,7 @@ private fun RelabHome(
     val intelligenceReports = dashboardAnalytics?.intelligenceReports.orEmpty()
     val crossMarketReport = dashboardAnalytics?.crossMarketReport
     val regimeChangeFindings = dashboardAnalytics?.regimeChangeFindings.orEmpty()
+    val weekdayPatternFindings = dashboardAnalytics?.weekdayPatternFindings.orEmpty()
     val candidateSets = dashboardAnalytics?.candidateSets.orEmpty()
     val sangamResearchSets = dashboardAnalytics?.sangamResearchSets.orEmpty()
     val sangamWalkForwardReports = dashboardAnalytics?.sangamWalkForwardReports.orEmpty()
@@ -436,7 +437,7 @@ private fun RelabHome(
             try {
                 val bundle = ResearchBundleExporter.export(
                     observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now(), predictionLedger,
-                    crossMarketReport, candidateWalkForwardReports, regimeChangeFindings
+                    crossMarketReport, candidateWalkForwardReports, regimeChangeFindings, weekdayPatternFindings
                 )
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bundle) }
                     ?: error("Research bundle file could not be written")
@@ -1102,6 +1103,31 @@ private fun RelabHome(
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 Text("${finding.previousWindowRecords} previous / ${finding.recentWindowRecords} recent records", style = MaterialTheme.typography.bodySmall)
+                                Text(finding.explanation, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+                Text(
+                    uiText(uiLanguage, "Weekday reverse-engineering · consensus history", "Weekday रिवर्स-इंजीनियरिंग · सहमति इतिहास", "Weekday रिव्हर्स-इंजिनिअरिंग · सहमती इतिहास"),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    uiText(uiLanguage, "Tests open/close family sequences, panna type and ank against weekday using permutation tests with within-session multiple-test correction. Minimum 30 consensus records across 3 active weekdays.", "Open/Close family sequence, panna type और ank को weekday के साथ permutation test से जांचता है; हर session में multiple-test correction लागू है। कम से कम 30 consensus records और 3 active weekdays चाहिए।", "Open/Close family sequence, panna type आणि ank यांची weekday सोबत permutation test ने तपासणी; प्रत्येक session मध्ये multiple-test correction. किमान 30 consensus records आणि 3 active weekdays आवश्यक."),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (weekdayPatternFindings.isEmpty()) {
+                    Text(uiText(uiLanguage, "No validated consensus chart history is available for weekday analysis.", "Weekday analysis के लिए validated consensus chart history उपलब्ध नहीं है।", "Weekday analysis साठी validated consensus chart history उपलब्ध नाही."))
+                } else {
+                    weekdayPatternFindings.forEach { finding ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("${finding.market} · ${finding.sessionId} · ${finding.feature}", style = MaterialTheme.typography.titleSmall)
+                                Text(finding.status.name.replace('_', ' '), style = MaterialTheme.typography.titleSmall)
+                                Text("${finding.records} records · ${finding.activeWeekdays}/7 weekdays · NMI ${finding.normalizedMutualInformation?.let { "%.3f".format(it) } ?: "—"} · p ${finding.permutationPValue?.let { "%.3f".format(it) } ?: "—"} · q ${finding.adjustedQValue?.let { "%.3f".format(it) } ?: "—"}", style = MaterialTheme.typography.bodySmall)
                                 Text(finding.explanation, style = MaterialTheme.typography.labelSmall)
                             }
                         }
