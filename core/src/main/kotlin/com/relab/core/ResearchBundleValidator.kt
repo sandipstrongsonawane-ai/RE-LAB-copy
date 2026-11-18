@@ -19,6 +19,8 @@ object ResearchBundleValidator {
         "source-observations.csv",
         "derived-consensus-research.csv",
         "walk-forward-audit.csv",
+        "cross-market-associations.csv",
+        "candidate-walk-forward-audit.csv",
         "historical-coverage-audit.csv",
         "source-publication-timing.csv",
         "prediction-learning-ledger.csv",
