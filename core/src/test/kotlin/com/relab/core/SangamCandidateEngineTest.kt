@@ -50,4 +50,69 @@ class SangamCandidateEngineTest {
             fail("Expected invalid limit")
         } catch (_: IllegalArgumentException) { }
     }
+
+    private fun datedObservations(): List<SourceObservation> {
+        val results = listOf("277-65-249", "578-07-368", "800-81-137", "566-74-148", "288-84-679")
+        return results.flatMapIndexed { index, result ->
+            listOf("publisher-a", "publisher-b").map { source ->
+                SourceObservation(
+                    market = Market.SRIDEVI,
+                    sessionId = "main",
+                    date = java.time.LocalDate.of(2026, 11, 1).plusDays(index.toLong()),
+                    sourceId = source,
+                    retrievedAt = java.time.Instant.parse("2026-11-18T10:00:00Z"),
+                    rawText = result,
+                    normalizedResult = result,
+                    status = ObservationStatus.PUBLISHED
+                )
+            }
+        }
+    }
+
+    @Test fun sangamWalkForwardUsesOnlyEarlierConsensusRows() {
+        val report = SangamWalkForwardEvaluator.evaluate(
+            datedObservations(), Market.SRIDEVI, "main",
+            minimumHistory = 2, topN = 10
+        )
+        assertEquals(5, report.totalTargetDates)
+        assertEquals(3, report.evaluatedDates)
+        assertEquals(2, report.insufficientHistoryDates)
+        assertTrue(report.warning.contains("Low sample"))
+    }
+
+    @Test fun sangamWalkForwardAbstainsOnSinglePublisherUnlessExplorationIsExplicit() {
+        val onePublisher = datedObservations().filter { it.sourceId == "publisher-a" }
+        val strict = SangamWalkForwardEvaluator.evaluate(
+            onePublisher, Market.SRIDEVI, "main", minimumHistory = 2
+        )
+        assertEquals(0, strict.evaluatedDates)
+        val exploratory = SangamWalkForwardEvaluator.evaluate(
+            onePublisher, Market.SRIDEVI, "main",
+            minimumHistory = 2, allowSingleSourceExploration = true
+        )
+        assertEquals(3, exploratory.evaluatedDates)
+        assertTrue(exploratory.warning.contains("Exploratory"))
+    }
+
+    @Test fun sangamWalkForwardRejectsDuplicateEligibleDatesAndInvalidWindows() {
+        val rows = datedObservations()
+        val duplicated = rows + rows.first()
+        try {
+            SangamWalkForwardEvaluator.evaluate(duplicated, Market.SRIDEVI, "main")
+            fail("Expected duplicate-date guard")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("Duplicate dates"))
+        }
+        try {
+            SangamWalkForwardEvaluator.evaluate(
+                rows, Market.SRIDEVI, "main",
+                startDateInclusive = java.time.LocalDate.of(2026, 11, 5),
+                endDateExclusive = java.time.LocalDate.of(2026, 11, 4)
+            )
+            fail("Expected invalid date window")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("End date"))
+        }
+    }
+
 }
