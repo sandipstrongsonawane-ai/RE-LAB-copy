@@ -225,6 +225,20 @@ private fun RelabHome(
             )
         }
     }
+    val selfLearningReports = remember(researchRecords) {
+        researchRecords.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
+            listOf(
+                com.relab.core.SelfLearningHypothesisEngine.discover(
+                    researchRecords, market, sessionId, com.relab.core.HypothesisSide.OPEN,
+                    minimumHistory = 8, minimumSupport = 3
+                ),
+                com.relab.core.SelfLearningHypothesisEngine.discover(
+                    researchRecords, market, sessionId, com.relab.core.HypothesisSide.CLOSE,
+                    minimumHistory = 8, minimumSupport = 3
+                )
+            )
+        }
+    }
     val candidateWalkForwardReports = remember(observations) {
         researchRecords.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
             listOf(
@@ -511,6 +525,44 @@ private fun RelabHome(
                     Text("Market intelligence will appear after valid published chart rows are available.")
                 } else {
                     intelligenceReports.forEach { MarketIntelligenceCard(it) }
+                }
+                Text("Self-learning reverse engineering · discovered rules", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Rules are mined separately per market and session from earlier chart transitions. Support and baseline lift are historical evidence, not guaranteed prediction accuracy.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (selfLearningReports.isEmpty()) {
+                    Text("Self-learning hypotheses will appear when enough valid historical rows are available.")
+                } else {
+                    selfLearningReports.forEach { report ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    "${report.market} · ${report.sessionId} · ${report.side} · ${report.evaluatedDates} evaluated dates",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                if (report.hypotheses.isEmpty()) {
+                                    Text("No rule met minimum historical support (${report.minimumSupport}).")
+                                } else {
+                                    report.hypotheses.take(5).forEach { hypothesis ->
+                                        Text(
+                                            "${hypothesis.condition} → ${hypothesis.hitRate.times(100).let { "%.1f".format(it) }}% " +
+                                                "(${hypothesis.correct}/${hypothesis.evaluated}) · baseline " +
+                                                "${hypothesis.baselineHitRate.times(100).let { "%.1f".format(it) }}% · " +
+                                                "lift ${hypothesis.liftOverBaseline.times(100).let { "%+.1f".format(it) }} pp",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 Text("Next draw candidate research", style = MaterialTheme.typography.titleLarge)
                 if (candidateSets.isEmpty()) {
