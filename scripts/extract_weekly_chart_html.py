@@ -53,21 +53,38 @@ class TableRows(HTMLParser):
             self._cell = None
 
 
-def _parse_date(value: str) -> date:
-    for fmt in ("%d/%m/%y", "%d/%m/%Y", "%d-%m-%Y", "%d-%m-%y"):
+def _parse_date(value: str, *, default_year: int | None = None) -> date:
+    value = " ".join(value.split())
+    formats = (
+        "%Y-%m-%d", "%d/%m/%y", "%d/%m/%Y", "%d-%m-%Y", "%d-%m-%y",
+        "%Y %b %d", "%Y %B %d",
+    )
+    for fmt in formats:
         try:
             return datetime.strptime(value, fmt).date()
         except ValueError:
             pass
+    if default_year is not None:
+        for fmt in ("%b %d", "%B %d"):
+            try:
+                parsed = datetime.strptime(value, fmt).date()
+                return parsed.replace(year=default_year)
+            except ValueError:
+                pass
     raise ValueError(f"Unsupported date in weekly range: {value}")
 
 
 def _week_range(value: str) -> tuple[date, date] | None:
-    matches = re.findall(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", value)
+    token = r"(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}\s+[A-Za-z]{3,9}\s+\d{1,2}|[A-Za-z]{3,9}\s+\d{1,2})"
+    matches = re.findall(token, value)
     if len(matches) != 2:
         return None
     try:
-        start, end = map(_parse_date, matches)
+        start = _parse_date(matches[0])
+        end = _parse_date(matches[1], default_year=start.year)
+        # Some publishers omit the year on the end date of a cross-year week.
+        if end < start and not re.match(r"\d{4}", matches[1]):
+            end = end.replace(year=end.year + 1)
     except ValueError:
         return None
     if end < start:
@@ -98,6 +115,8 @@ def _result_digits(cell: str) -> str | None:
 def _cell_observation(cell: str) -> tuple[str, str]:
     """Return (status, normalized result); raw cell text is stored separately."""
     lowered = cell.casefold()
+    if re.fullmatch(r"[\s*—–-]+", cell):
+        return "MISSING_FROM_SOURCE", ""
     holiday = re.search(
         r"\b(?:holiday|closed|market\s+off|no\s+market|weekly\s+off)\b", lowered
     ) is not None
