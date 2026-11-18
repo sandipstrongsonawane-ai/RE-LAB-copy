@@ -138,6 +138,29 @@ object MarketSourceCatalog {
             "https://livesattamatka.net/panna-chart/main-bazar-morning", "weekly-panel",
             note = "Verified weekly panel archive; distinct morning market identity."
         ),
+        // SattaMatkai publishes date-ranged weekly panel matrices for these
+        // exact market pages. The generic weekly-matrix adapter recognizes the
+        // Date + weekday table and preserves star placeholders as pending/missing.
+        MarketSource(
+            Market.SRIDEVI, "main", "sattamatkai",
+            "https://sattamatkai.in/panel-chart-record/sridevi", "weekly-panel",
+            note = "Verified Sridevi panel archive with dated weekday matrix; parser coverage is fixture-tested."
+        ),
+        MarketSource(
+            Market.KALYAN, "main", "sattamatkai",
+            "https://sattamatkai.in/panel-chart-record/kalyan", "weekly-panel",
+            note = "Verified Kalyan panel archive with dated weekday matrix; parser coverage is fixture-tested."
+        ),
+        MarketSource(
+            Market.TIME_BAZAR, "main", "sattamatkai",
+            "https://sattamatkai.in/panel-chart-record/time-bazar", "weekly-panel",
+            note = "Verified Time Bazar panel archive with dated weekday matrix; parser coverage is fixture-tested."
+        ),
+        MarketSource(
+            Market.MILAN_DAY, "main", "sattamatkai",
+            "https://sattamatkai.in/panel-chart-record/milan-day", "weekly-panel",
+            note = "Verified Milan Day panel archive with dated weekday matrix; parser coverage is fixture-tested."
+        ),
         MarketSource(
             Market.KALYAN, "main", "kalyanchart",
             "https://kalyanchart.cyou/history/", "archive",
