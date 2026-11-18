@@ -27,7 +27,8 @@ internal data class DashboardAnalytics(
         fun compute(
             observations: List<SourceObservation>,
             coverageRangeOverrides: Map<String, Pair<LocalDate, LocalDate>>,
-            marketSources: List<MarketSource>
+            marketSources: List<MarketSource>,
+            learningLedger: PredictionLearningLedger
         ): DashboardAnalytics {
             val groups = SourceReconciliation.reconcile(observations)
             val chartBuild = ReconciledChartBuilder.build(observations)
@@ -76,19 +77,23 @@ internal data class DashboardAnalytics(
                     listOf(
                         CandidateWalkForwardEvaluator.evaluate(
                             observations, market, sessionId, PannaSide.OPEN,
-                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
+                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = false,
+                            learningLedger = learningLedger
                         ),
                         CandidateWalkForwardEvaluator.evaluate(
                             observations, market, sessionId, PannaSide.CLOSE,
-                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
+                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = false,
+                            learningLedger = learningLedger
                         ),
                         CandidateWalkForwardEvaluator.evaluate(
                             observations, market, sessionId, PannaSide.OPEN,
-                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = true,
+                            learningLedger = learningLedger
                         ),
                         CandidateWalkForwardEvaluator.evaluate(
                             observations, market, sessionId, PannaSide.CLOSE,
-                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+                            minimumHistory = 5, topN = 10, allowSingleSourceExploration = true,
+                            learningLedger = learningLedger
                         )
                     )
                 }
