@@ -226,6 +226,35 @@ class LocalObservationDatabase(context: Context) :
         }
     }
 
+    /** Atomically merges a portable ledger without replacing existing frozen history. */
+    fun appendPredictionLedger(incoming: PredictionLearningLedger): PredictionLearningLedger {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val existing = loadPredictionLedger()
+            val existingPredictions = existing.lockedPredictions.associateBy { it.id }
+            incoming.lockedPredictions.forEach { prediction ->
+                val prior = existingPredictions[prediction.id]
+                require(prior == null || prior == prediction) {
+                    "Backup prediction conflicts with an existing locked prediction: ${prediction.id}"
+                }
+                if (prior == null) appendLockedPrediction(prediction)
+            }
+            val existingAttempts = existing.verifications.associateBy { it.predictionId to it.attempt }
+            incoming.verifications.sortedWith(compareBy<PredictionVerification> { it.predictionId }.thenBy { it.attempt }).forEach { verification ->
+                val prior = existingAttempts[verification.predictionId to verification.attempt]
+                require(prior == null || prior == verification) {
+                    "Backup verification conflicts with existing attempt ${verification.attempt} for ${verification.predictionId}"
+                }
+                if (prior == null) appendPredictionVerification(verification)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return loadPredictionLedger()
+    }
+
     fun loadPredictionLedger(): PredictionLearningLedger {
         val db = readableDatabase
         val predictions = mutableListOf<LockedSidePrediction>()
