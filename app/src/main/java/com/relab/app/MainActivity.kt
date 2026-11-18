@@ -266,8 +266,9 @@ private fun RelabHome(
     }
 
     LaunchedEffect(observations, predictionLedger) {
-        predictionLedger.lockedPredictions.forEach { prediction ->
-            val latest = predictionLedger.verifications.filter { it.predictionId == prediction.id }
+        var currentLedger = predictionLedger
+        currentLedger.lockedPredictions.forEach { prediction ->
+            val latest = currentLedger.verifications.filter { it.predictionId == prediction.id }
                 .maxByOrNull { it.attempt }
             val targetRows = observations.filter {
                 it.market == prediction.market && it.sessionId == prediction.sessionId &&
@@ -277,15 +278,16 @@ private fun RelabHome(
             if (targetRows.isNotEmpty() && freshEvidence && (latest == null || latest.grade == com.relab.core.PredictionGrade.GREY)) {
                 runCatching {
                     val (updated, verification) = com.relab.core.PredictionLearningCycle.verify(
-                        predictionLedger, prediction.id, observations, java.time.Instant.now()
+                        currentLedger, prediction.id, observations, java.time.Instant.now()
                     )
                     onSavePredictionVerification(verification)
-                    predictionLedger = updated
+                    currentLedger = updated
                 }.onFailure { error ->
                     importMessage = "Prediction verification pending: ${error.message ?: "storage/reconciliation error"}"
                 }
             }
         }
+        if (currentLedger != predictionLedger) predictionLedger = currentLedger
     }
 
     val report = remember(rawCsv) { rawCsv?.let { SourceCsvImporter.import(it) } }
