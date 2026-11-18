@@ -304,7 +304,7 @@ object FixResultKalyanWeeklyParserAdapter : ChartParserAdapter {
 object ChartParserRegistry {
     // Publisher-specific adapters should be added ahead of the conservative fallback
     // only after real saved-page fixtures and tests prove their extraction.
-    private val adapters: List<ChartParserAdapter> = listOf(MatkaFlashHistoryParserAdapter, FixResultKalyanWeeklyParserAdapter, GenericWeeklyMatrixParserAdapter, GenericHtmlTableParserAdapter)
+    private val adapters: List<ChartParserAdapter> = listOf(MatkaFlashHistoryParserAdapter, FixResultKalyanWeeklyParserAdapter, SattaMatkaJodiThreeCellWeeklyParserAdapter, GenericWeeklyMatrixParserAdapter, GenericHtmlTableParserAdapter)
 
     fun parse(
         html: String,
