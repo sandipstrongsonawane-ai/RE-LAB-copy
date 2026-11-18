@@ -52,6 +52,16 @@ class MarketSourceCatalogTest {
         assertEquals("matkaflash", night.sourceId)
     }
 
+    @Test fun livesattamatkaNetArchivesStayDisabledAndSharePublisherIdentity() {
+        val netSources = MarketSourceCatalog.sources.filter { it.url.contains("livesattamatka.net") }
+        assertEquals(4, netSources.size)
+        assertTrue(netSources.all { !it.enabled && it.sourceId == "livesattamatka" })
+        assertEquals(
+            setOf(Market.SRIDEVI, Market.KALYAN, Market.KALYAN_MORNING, Market.PUNA_BAZAR),
+            netSources.map { it.market }.toSet()
+        )
+    }
+
     @Test fun sourceLookupUsesExactRegisteredUrl() {
         val source = MarketSourceCatalog.sources.first()
         assertEquals(source, MarketSourceCatalog.findByUrl(source.url))
