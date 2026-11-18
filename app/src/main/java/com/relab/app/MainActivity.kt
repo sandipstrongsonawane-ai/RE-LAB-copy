@@ -924,18 +924,18 @@ private fun RelabHome(
                     Triple(it.sourceId, it.sourceUrl.orEmpty(), it.market to it.sessionId)
                 }.toList().sortedWith(compareBy({ it.first.third.first.name }, { it.first.third.second }, { it.first.first }, { it.first.second }))
                 if (sourceChartGroups.isEmpty()) {
-                    Text("Each registered URL's own chart history will appear here after supported rows are fetched.")
+                    Text(uiText(uiLanguage, "Each registered URL's own chart history will appear here after supported rows are fetched.", "समर्थित रिकॉर्ड मिलने के बाद हर URL का अपना चार्ट इतिहास यहां दिखेगा।", "समर्थित नोंदी मिळाल्यानंतर प्रत्येक URL चा स्वतंत्र चार्ट इतिहास येथे दिसेल."))
                 } else {
                     sourceChartGroups.forEach { (identity, rows) ->
                         Card {
                             Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text("${identity.first} · ${identity.third.first.name}/${identity.third.second}", style = MaterialTheme.typography.titleSmall)
-                                Text("URL: ${identity.second}", style = MaterialTheme.typography.bodySmall)
-                                Text("${rows.size} rows · ${rows.map { it.date }.distinct().size} distinct dates · latest ${rows.maxOf { it.date }}", style = MaterialTheme.typography.bodySmall)
+                                Text(uiText(uiLanguage, "URL: ${identity.second}", "URL: ${identity.second}", "URL: ${identity.second}"), style = MaterialTheme.typography.bodySmall)
+                                Text(uiText(uiLanguage, "${rows.size} rows · ${rows.map { it.date }.distinct().size} distinct dates · latest ${rows.maxOf { it.date }}", "${rows.size} रिकॉर्ड · ${rows.map { it.date }.distinct().size} अलग तारीखें · नवीनतम ${rows.maxOf { it.date }}", "${rows.size} नोंदी · ${rows.map { it.date }.distinct().size} वेगवेगळ्या तारखा · नवीनतम ${rows.maxOf { it.date }}"), style = MaterialTheme.typography.bodySmall)
                                 rows.sortedByDescending { it.date }.take(12).forEach { row ->
                                     Text("${row.date}: ${row.normalizedResult ?: row.rawText} · ${row.status}", style = MaterialTheme.typography.bodySmall)
                                 }
-                                if (rows.size > 12) Text("Showing latest 12 of ${rows.size} rows.", style = MaterialTheme.typography.labelSmall)
+                                if (rows.size > 12) Text(uiText(uiLanguage, "Showing latest 12 of ${rows.size} rows.", "${rows.size} में से नवीनतम 12 रिकॉर्ड दिखाए गए।", "${rows.size} पैकी नवीनतम 12 नोंदी दाखवल्या आहेत."), style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
