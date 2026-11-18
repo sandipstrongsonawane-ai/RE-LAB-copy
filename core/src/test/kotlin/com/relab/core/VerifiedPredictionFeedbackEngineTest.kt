@@ -73,7 +73,7 @@ class VerifiedPredictionFeedbackEngineTest {
                 )
             }
         }
-        val hit = prediction("2026-10-01", PannaSide.OPEN, listOf("578"))
+        val hit = prediction("2026-10-01", PannaSide.OPEN, listOf("528"))
         val miss = prediction("2026-10-02", PannaSide.OPEN, listOf("111"))
         val ledger = PredictionLearningLedger(
             lockedPredictions = listOf(hit, miss),
@@ -90,8 +90,8 @@ class VerifiedPredictionFeedbackEngineTest {
             history, Market.SRIDEVI, "main", target, PannaSide.OPEN,
             limit = 100, learningLedger = ledger
         )
-        val baseCandidate = baseline.candidates.single { it.panna == "578" }
-        val learnedCandidate = learned.candidates.single { it.panna == "578" }
+        val baseCandidate = baseline.candidates.single { it.panna == "528" }
+        val learnedCandidate = learned.candidates.single { it.panna == "528" }
         assertEquals(0, baseCandidate.verifiedFeedbackExposure)
         assertEquals(1, learnedCandidate.verifiedFeedbackExposure)
         assertTrue(learnedCandidate.score > baseCandidate.score)
