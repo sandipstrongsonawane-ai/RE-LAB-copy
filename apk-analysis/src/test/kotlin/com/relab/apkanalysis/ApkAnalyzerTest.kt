@@ -22,7 +22,7 @@ class ApkAnalyzerTest {
             assertEquals("text-xml", report.manifestFormat)
             assertEquals(2, report.dexFiles.size); assertEquals(listOf("035","039"), report.dexVersions)
             assertEquals(listOf("libsample.so"), report.nativeLibraries["arm64-v8a"])
-            assertEquals("MainActivity", report.components.single().name)
+            assertEquals(".MainActivity", report.components.single().name)
             assertEquals(1, report.resourceEntryCount)
         } finally { apk.delete() }
     }
