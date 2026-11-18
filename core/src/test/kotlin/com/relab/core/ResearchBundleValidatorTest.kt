@@ -119,7 +119,7 @@ class ResearchBundleValidatorTest {
                 val hash = MessageDigest.getInstance("SHA-256").digest(bytes)
                     .joinToString("") { "%02x".format(it) }
                 "    {\"file\":\"$name\",\"utf8_bytes\":${bytes.size},\"sha256\":\"$hash\"}"
-            }.joinToString(",\\n"))
+            }.joinToString(",\n"))
             appendLine("  ]")
             appendLine("}")
         }
