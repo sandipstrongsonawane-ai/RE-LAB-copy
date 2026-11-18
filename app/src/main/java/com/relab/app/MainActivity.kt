@@ -809,7 +809,7 @@ private fun RelabHome(
                 if (activeSection == "research") {
                 Text(uiText(uiLanguage, "Pattern research · exploratory + verified", "पैटर्न रिसर्च · खोज + सत्यापन", "पॅटर्न संशोधन · शोध + पडताळणी"), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Analysis input: ${researchRecords.size} valid historical rows (${chartBuild.records.size} consensus + ${chartBuild.singleSourceUnverifiedGroups.size} single-source groups) · Conflicts excluded: ${chartBuild.conflictGroups.size} · Pending/missing excluded: ${chartBuild.noPublishedResultGroups.size} · Invalid excluded: ${chartBuild.invalidGroups.size}",
+                    uiText(uiLanguage, "Analysis input: ${researchRecords.size} valid historical rows (${chartBuild.records.size} consensus + ${chartBuild.singleSourceUnverifiedGroups.size} single-source groups) · Conflicts excluded: ${chartBuild.conflictGroups.size} · Pending/missing excluded: ${chartBuild.noPublishedResultGroups.size} · Invalid excluded: ${chartBuild.invalidGroups.size}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (patternAnalyses.isEmpty()) {
