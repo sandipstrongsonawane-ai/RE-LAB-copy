@@ -237,4 +237,40 @@ class LocalObservationDatabaseInstrumentedTest {
         context.deleteDatabase("relab_local_history.db")
     }
 
+    @Test
+    fun sourceImportIsIdempotentButIndependentConflictsAndPublisherCorrectionsAreRetained() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("relab_local_history.db")
+        val capturedAt = Instant.parse("2026-11-18T10:00:00Z")
+        val base = SourceObservation(
+            market = Market.SRIDEVI, sessionId = "day",
+            date = LocalDate.parse("2026-11-17"), sourceId = "publisher-a",
+            sourceRecordId = "row-17", sourceUrl = "https://publisher-a.example/chart",
+            retrievedAt = capturedAt, publishedAt = null, rawText = "012-07-000",
+            normalizedResult = "012-07-000", status = ObservationStatus.PUBLISHED
+        )
+        val independentConflict = base.copy(
+            sourceId = "publisher-b", sourceRecordId = "other-row-17",
+            sourceUrl = "https://publisher-b.example/chart",
+            rawText = "123-45-678", normalizedResult = "123-45-678"
+        )
+        val correctedSnapshot = base.copy(
+            retrievedAt = capturedAt.plusSeconds(3600),
+            rawText = "012-08-000", normalizedResult = "012-08-000"
+        )
+        LocalObservationDatabase(context).use { db ->
+            val first = db.appendDataset("first-import", listOf(base, independentConflict, correctedSnapshot))
+            assertEquals(3, first.size)
+            val repeated = db.appendDataset("same-import", listOf(base, independentConflict, correctedSnapshot))
+            assertEquals(first, repeated)
+            assertEquals(3, db.loadObservations().size)
+            val group = com.relab.core.SourceReconciliation.reconcile(db.loadObservations()).single()
+            assertEquals(com.relab.core.ReconciliationState.CONFLICT, group.state)
+            assertEquals(3, group.observations.size)
+            assertEquals(setOf("012-07-000", "012-08-000", "123-45-678"),
+                group.observations.mapNotNull { it.normalizedResult }.toSet())
+        }
+        context.deleteDatabase("relab_local_history.db")
+    }
+
 }
