@@ -43,7 +43,7 @@ class MarketSourceCatalogTest {
     }
 
     @Test fun includesKalyanMorningAndNightAsSeparateSessions() {
-        val morning = MarketSourceCatalog.enabledFor(Market.KALYAN_MORNING, "main").single()
+        val morning = MarketSourceCatalog.enabledFor(Market.KALYAN_MORNING, "main").single { it.sourceId == "matkaflash" }
         val night = MarketSourceCatalog.enabledFor(Market.KALYAN_NIGHT, "night").single()
         assertEquals("https://matkaflash.com/kalyan-morning/panel-chart", morning.url)
         assertEquals("https://matkaflash.com/kalyan-night/panel-chart", night.url)
