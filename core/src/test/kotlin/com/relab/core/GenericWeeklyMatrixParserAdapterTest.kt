@@ -61,4 +61,40 @@ class GenericWeeklyMatrixParserAdapterTest {
             assertTrue(expected.message.orEmpty().contains("UNSUPPORTED"))
         }
     }
+    @Test fun parsesHpOfficialWeeklyMatrixWithCompactDatesAndSpacedDigits() {
+        val html = """
+            <table>
+              <tr><th>DATE</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th></tr>
+              <tr><td>29/12/25TO04/01/26</td><td>4 6 0 09 2 8 9</td><td>4 5 0 92 2 4 6</td><td>1 8 9 83 6 8 9</td><td>1 5 5 14 6 8 0</td><td>2 9 9 00 4 7 9</td><td>2 5 0 78 1 7 0</td><td>1 3 4 89 4 5 0</td></tr>
+            </table>
+        """.trimIndent()
+        val url = "https://hpofficial.in/sridevi-panel-chart/"
+        assertTrue(GenericWeeklyMatrixParserAdapter.supports(html, url))
+        val parsed = ChartParserRegistry.parse(html, url, Market.SRIDEVI, "main", retrievedAt)
+        assertEquals(7, parsed.observations.size)
+        val monday = parsed.observations.single { it.date == LocalDate.parse("2025-12-29") }
+        assertEquals("460-09-289", monday.normalizedResult)
+        assertEquals("hpofficial.in", monday.sourceId)
+        assertTrue(parsed.observations.all { it.status == ObservationStatus.PUBLISHED })
+    }
+
+    @Test fun parsesLiveSattaWeeklyMatrixWhereYearAppearsOnlyAtRangeEnd() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+              <tr><td>16/11 to 22/11 2026</td><td>5 7 7 99 6 6 7</td><td>1 1 5 73 2 2 9</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>09/11 to 15/11 2026</td><td>2 7 7 65 2 4 9</td><td>5 7 8 07 3 6 8</td><td>8 0 0 81 1 3 7</td><td>5 6 6 73 1 4 8</td><td>2 8 8 82 6 7 9</td><td>2 7 9 81 2 3 6</td><td>6 9 9 41 5 6 0</td></tr>
+            </table>
+        """.trimIndent()
+        val url = "https://livesattamatka.org/panel-record/sridevi"
+        assertTrue(GenericWeeklyMatrixParserAdapter.supports(html, url))
+        val parsed = ChartParserRegistry.parse(html, url, Market.SRIDEVI, "main", retrievedAt)
+        assertEquals(14, parsed.observations.size)
+        val monday = parsed.observations.single { it.date == LocalDate.parse("2026-11-16") }
+        assertEquals("577-99-667", monday.normalizedResult)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE,
+            parsed.observations.single { it.date == LocalDate.parse("2026-11-18") }.status)
+        assertEquals("livesattamatka.org", monday.sourceId)
+    }
+
 }
