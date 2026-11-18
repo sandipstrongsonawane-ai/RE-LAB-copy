@@ -100,26 +100,30 @@ internal data class DashboardAnalytics(
                     )
                 }
 
-            val coverageReports = observations
-                .groupBy { it.market to it.sessionId }
-                .mapNotNull { (key, rows) ->
-                    val dates = rows.map { it.date }
-                    if (dates.isEmpty()) null else HistoricalCoverageAudit.analyze(
-                        market = key.first,
-                        sessionId = key.second,
-                        startDate = coverageRangeOverrides["${key.first.name}:${key.second}"]?.first
-                            ?: dates.minOrNull()!!,
-                        endDate = coverageRangeOverrides["${key.first.name}:${key.second}"]?.second
-                            ?: dates.maxOrNull()!!,
-                        observations = rows
-                    )
-                }
-                .sortedWith(compareBy<CoverageReport> { it.market.name }.thenBy { it.sessionId })
-
-            // Include registered URL groups even before their first successful fetch.
-            // With no imported dates, show a rolling 30-day coverage window by default.
+            // Include every observed market and every enabled registered market, even
+            // when a source has never returned a row. This makes never-fetched history
+            // visible as NO_OBSERVATION instead of silently omitting the market.
             val coverageKeys = (observations.map { it.market to it.sessionId } +
                 marketSources.filter { it.enabled }.map { it.market to it.sessionId }).distinct()
+
+            val coverageReports = coverageKeys.map { key ->
+                val dates = observations.asSequence()
+                    .filter { it.market == key.first && it.sessionId == key.second }
+                    .map { it.date }
+                    .toList()
+                val override = coverageRangeOverrides["${key.first.name}:${key.second}"]
+                val start = override?.first ?: dates.minOrNull() ?: LocalDate.now().minusDays(30)
+                val end = override?.second ?: dates.maxOrNull() ?: LocalDate.now()
+                HistoricalCoverageAudit.analyze(
+                    market = key.first,
+                    sessionId = key.second,
+                    startDate = start,
+                    endDate = end,
+                    observations = observations
+                )
+            }.sortedWith(compareBy<CoverageReport> { it.market.name }.thenBy { it.sessionId })
+
+            // Per-URL publisher coverage also uses the same complete market/session set.
             val publisherCoverageReports = coverageKeys.map { key ->
                 val rows = observations.filter { it.market == key.first && it.sessionId == key.second }
                 val dates = rows.map { it.date }
