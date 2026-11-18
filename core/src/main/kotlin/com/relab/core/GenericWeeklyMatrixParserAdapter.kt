@@ -144,7 +144,7 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
         // 29/12/25TO04/01/26, 16-11-2026 to 22-11-2026,
         // and 16/11 to 22/11 2026 (year printed only once).
         val match = Regex(
-            """^\\s*(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2,4}))?\\s*(?:to|through|[-–])\\s*(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2,4}))?(?:\\s+(\\d{4}))?\\s*$""",
+            """^\s*(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\s*(?:to|through|[-–])\s*(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?(?:\s+(\d{4}))?\s*$""",
             RegexOption.IGNORE_CASE
         ).matchEntire(value) ?: return null
         val day1 = match.groupValues[1].toIntOrNull() ?: return null
