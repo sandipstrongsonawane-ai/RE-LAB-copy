@@ -123,7 +123,8 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
                 }
             }
         }
-        return ChartParserResult(id, observations.distinctBy { it.date }, skipped, issues)
+        // Keep every source row, including repeated dates: differing values must remain visible as conflicts.
+        return ChartParserResult(id, observations, skipped, issues)
     }
 
     private fun findMatrix(document: org.jsoup.nodes.Document): Matrix? {
