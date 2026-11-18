@@ -79,38 +79,40 @@ object CandidateWalkForwardEvaluator {
         var top10 = 0
         var reciprocalRankTotal = 0.0
 
+        val priorRecords = mutableListOf<ChartRecord>()
         targetRecords.forEach { actual ->
-            val ranking = CandidateRankingEngine.rank(
-                observations = observations,
+            val ranking = CandidateRankingEngine.rankRecords(
+                records = priorRecords,
                 market = market,
                 sessionId = sessionId,
                 targetDate = actual.date,
                 side = side,
                 limit = topN,
-                minimumHistory = minimumHistory,
-                allowSingleSourceExploration = allowSingleSourceExploration
+                minimumHistory = minimumHistory
             )
-            if (ranking.abstained) return@forEach
+            if (!ranking.abstained) {
+                evaluated++
+                val actualPanna = if (side == PannaSide.OPEN) actual.openPanna else actual.closePanna
+                val actualRank = ranking.candidates.indexOfFirst { it.panna == actualPanna }
+                    .takeIf { it >= 0 }
+                    ?.plus(1)
 
-            evaluated++
-            val actualPanna = if (side == PannaSide.OPEN) actual.openPanna else actual.closePanna
-            val actualRank = ranking.candidates.indexOfFirst { it.panna == actualPanna }
-                .takeIf { it >= 0 }
-                ?.plus(1)
+                if (actualRank == 1) top1++
+                if (actualRank != null && actualRank <= 3) top3++
+                if (actualRank != null && actualRank <= 5) top5++
+                if (actualRank != null && actualRank <= 10) top10++
+                if (actualRank != null) reciprocalRankTotal += 1.0 / actualRank
 
-            if (actualRank == 1) top1++
-            if (actualRank != null && actualRank <= 3) top3++
-            if (actualRank != null && actualRank <= 5) top5++
-            if (actualRank != null && actualRank <= 10) top10++
-            if (actualRank != null) reciprocalRankTotal += 1.0 / actualRank
-
-            ranking.candidates.forEach { candidate ->
-                selectedCounts[candidate.panna] = (selectedCounts[candidate.panna] ?: 0) + 1
-                if (candidate.panna == actualPanna) {
-                    exactHitsByCandidate[candidate.panna] =
-                        (exactHitsByCandidate[candidate.panna] ?: 0) + 1
+                ranking.candidates.forEach { candidate ->
+                    selectedCounts[candidate.panna] = (selectedCounts[candidate.panna] ?: 0) + 1
+                    if (candidate.panna == actualPanna) {
+                        exactHitsByCandidate[candidate.panna] =
+                            (exactHitsByCandidate[candidate.panna] ?: 0) + 1
+                    }
                 }
             }
+            // The actual result enters training only after its own target evaluation.
+            priorRecords += actual
         }
 
         val candidateMetrics = selectedCounts.map { (panna, selected) ->
