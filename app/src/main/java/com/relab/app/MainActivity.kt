@@ -1134,8 +1134,7 @@ private fun importChartLink(
     save: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
     updateObservations: (List<com.relab.core.SourceObservation>) -> Unit,
     updateMessage: (String) -> Unit,
-    updateBusy: (Boolean) -> Unit,
-    updateStatuses: (Map<String, String>) -> Unit
+    updateBusy: (Boolean) -> Unit
 ) {
     val cleanUrl = rawUrl.trim()
     val mainHandler = Handler(Looper.getMainLooper())
@@ -1202,7 +1201,8 @@ private fun refreshRegisteredSources(
     save: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
     updateObservations: (List<com.relab.core.SourceObservation>) -> Unit,
     updateMessage: (String) -> Unit,
-    updateBusy: (Boolean) -> Unit
+    updateBusy: (Boolean) -> Unit,
+    updateStatuses: (Map<String, String>) -> Unit
 ) {
     val enabledSources = sources.filter { it.enabled }
     val mainHandler = Handler(Looper.getMainLooper())
