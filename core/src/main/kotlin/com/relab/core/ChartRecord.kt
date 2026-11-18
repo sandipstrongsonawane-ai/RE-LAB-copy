@@ -39,7 +39,7 @@ class Market private constructor(
         val entries: List<Market> = listOf(
             SRIDEVI, SRIDEVI_NIGHT, KALYAN, TIME_BAZAR, MAIN_BAZAR,
             MILAN_DAY, KALYAN_MORNING, KALYAN_NIGHT,
-            TIME_BAZAR, TIME_BAZAR_DAY, NEW_TIME_BAZAR, MAIN_BAZAR_NIGHT,
+            TIME_BAZAR_DAY, NEW_TIME_BAZAR, MAIN_BAZAR_NIGHT,
             CB, MAIN_RATAN, SUNDAY_BAZAR, GEETA_MORNING, MAIN_BAZAR_MORNING
         )
 
