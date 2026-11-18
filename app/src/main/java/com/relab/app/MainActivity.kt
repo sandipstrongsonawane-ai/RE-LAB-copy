@@ -597,7 +597,7 @@ private fun RelabHome(
                 OutlinedTextField(
                     value = chartUrl,
                     onValueChange = { chartUrl = it },
-                    label = { Text("Paste chart website link") },
+                    label = { Text(uiText(uiLanguage, "Paste chart website link", "चार्ट वेबसाइट लिंक डालें", "चार्ट वेबसाइट लिंक पेस्ट करा")) },
                     placeholder = { Text("https://sattamatkajodi.com/record/kalyan-penal-chart.php") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -620,10 +620,10 @@ private fun RelabHome(
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(uiText(uiLanguage, "Chart source manager", "चार्ट सोर्स मैनेजर", "चार्ट स्रोत व्यवस्थापक"), style = MaterialTheme.typography.titleMedium)
                         Text("Har saved URL ka apna source history rahega. Same publisher ke multiple pages ek hi evidence identity use karenge.")
-                        OutlinedTextField(sourceUrlInput, { sourceUrlInput = it }, label = { Text("Chart URL (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(sourcePublisherInput, { sourcePublisherInput = it }, label = { Text("Publisher identity (same publisher ke pages par same naam)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text("Market (auto-detect if known; otherwise enter market)") }, placeholder = { Text("SRIDEVI / SRIDEVI_NIGHT / KALYAN / TIME_BAZAR / MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(sourceSessionInput, { sourceSessionInput = it }, label = { Text("Session ID (required if URL is not recognized)") }, placeholder = { Text("main / night / evening") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceUrlInput, { sourceUrlInput = it }, label = { Text(uiText(uiLanguage, "Chart URL (HTTPS)", "चार्ट URL (HTTPS)", "चार्ट URL (HTTPS)")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourcePublisherInput, { sourcePublisherInput = it }, label = { Text(uiText(uiLanguage, "Publisher identity (same name across its pages)", "पब्लिशर की पहचान (उसके सभी पेज पर एक ही नाम)", "प्रकाशक ओळख (त्याच्या सर्व पेजवर एकच नाव)")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text(uiText(uiLanguage, "Market (auto-detect if known; otherwise enter market)", "मार्केट (पहचान न हो तो नाम डालें)", "मार्केट (ओळखले नाही तर नाव भरा)")) }, placeholder = { Text("SRIDEVI / SRIDEVI_NIGHT / KALYAN / TIME_BAZAR / MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceSessionInput, { sourceSessionInput = it }, label = { Text(uiText(uiLanguage, "Session ID (required if URL is not recognized)", "सेशन ID (URL पहचान न हो तो जरूरी)", "सेशन ID (URL ओळखले नाही तर आवश्यक)")) }, placeholder = { Text("main / night / evening") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Button(
                             enabled = sourceUrlInput.isNotBlank() && !linkBusy,
                             onClick = {
@@ -658,7 +658,7 @@ private fun RelabHome(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (editingSourceUrl == null) "Add chart source" else "Save source changes") }
+                        ) { Text(if (editingSourceUrl == null) uiText(uiLanguage, "Add chart source", "चार्ट सोर्स जोड़ें", "चार्ट स्रोत जोडा") else uiText(uiLanguage, "Save source changes", "सोर्स बदलाव सेव करें", "स्रोत बदल जतन करा")) }
                         if (editingSourceUrl != null) {
                             OutlinedButton(onClick = {
                                 editingSourceUrl = null
@@ -666,7 +666,7 @@ private fun RelabHome(
                                 sourcePublisherInput = ""
                                 sourceMarketInput = ""
                                 sourceSessionInput = ""
-                            }) { Text("Cancel edit") }
+                            }) { Text(uiText(uiLanguage, "Cancel edit", "एडिट रद्द करें", "बदल रद्द करा")) }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
@@ -677,7 +677,7 @@ private fun RelabHome(
                                 modifier = Modifier.weight(1f)
                             ) { Text(if (linkBusy) uiText(uiLanguage, "Refreshing…", "रिफ्रेश हो रहा है…", "रिफ्रेश होत आहे…") else uiText(uiLanguage, "Refresh all sources", "सभी सोर्स रिफ्रेश करें", "सर्व स्रोत रिफ्रेश करा")) }
                         }
-                        Text("Registered sources: ${marketSources.size} · Enabled: ${marketSources.count { it.enabled }}")
+                        Text(uiText(uiLanguage, "Registered sources: ${marketSources.size} · Enabled: ${marketSources.count { it.enabled }}", "कुल सोर्स: ${marketSources.size} · चालू: ${marketSources.count { it.enabled }}", "नोंदणीकृत स्रोत: ${marketSources.size} · सुरू: ${marketSources.count { it.enabled }}"))
                         marketSources.forEach { source ->
                             Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text("${source.sourceId} · ${source.market.name}/${source.sessionId}", style = MaterialTheme.typography.titleSmall)
@@ -735,43 +735,43 @@ private fun RelabHome(
                         observations = emptyList()
                         onClearCsv()
                         importMessage = "Local database cleared."
-                    }, enabled = observations.isNotEmpty()) { Text("Clear local dataset") }
+                    }, enabled = observations.isNotEmpty()) { Text(uiText(uiLanguage, "Clear local dataset", "लोकल डेटा हटाएं", "स्थानिक डेटा साफ करा")) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { researchExportPicker.launch("relab-derived-consensus-research.csv") },
                         enabled = chartBuild.records.isNotEmpty()
-                    ) { Text("Export research CSV") }
+                    ) { Text(uiText(uiLanguage, "Export research CSV", "रिसर्च CSV एक्सपोर्ट", "संशोधन CSV एक्सपोर्ट")) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { walkForwardExportPicker.launch("relab-walk-forward-audit.csv") },
                         enabled = patternAnalyses.any { it.walkForwardRows.isNotEmpty() }
-                    ) { Text("Export walk-forward CSV") }
+                    ) { Text(uiText(uiLanguage, "Export walk-forward CSV", "वॉक-फॉरवर्ड CSV एक्सपोर्ट", "वॉक-फॉरवर्ड CSV एक्सपोर्ट")) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { manifestExportPicker.launch("relab-research-manifest.json") },
                         enabled = observations.isNotEmpty()
-                    ) { Text("Export research manifest") }
+                    ) { Text(uiText(uiLanguage, "Export research manifest", "रिसर्च मेनिफेस्ट एक्सपोर्ट", "संशोधन मॅनिफेस्ट एक्सपोर्ट")) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { coverageExportPicker.launch("relab-historical-coverage-audit.csv") },
                         enabled = coverageReports.isNotEmpty()
-                    ) { Text("Export coverage audit CSV") }
+                    ) { Text(uiText(uiLanguage, "Export coverage audit CSV", "कवरेज ऑडिट CSV एक्सपोर्ट", "कव्हरेज ऑडिट CSV एक्सपोर्ट")) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { timingExportPicker.launch("relab-source-publication-timing.csv") },
                         enabled = sourceTiming.isNotEmpty()
-                    ) { Text("Export source timing CSV") }
+                    ) { Text(uiText(uiLanguage, "Export source timing CSV", "सोर्स टाइमिंग CSV एक्सपोर्ट", "स्रोत वेळ CSV एक्सपोर्ट")) }
                 }
                 }
                 if (activeSection == "home") {
                 Card(colors = CardDefaults.cardColors()) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Local dataset", style = MaterialTheme.typography.titleLarge)
+                        Text(uiText(uiLanguage, "Local dataset", "लोकल डेटा", "स्थानिक डेटा"), style = MaterialTheme.typography.titleLarge)
                         Text("Source observations: ${observations.size}")
                         Text("Published: $published   Pending: $pending")
                         Text("Malformed rows: $malformed   Conflicting dates: $conflicts")
@@ -795,7 +795,7 @@ private fun RelabHome(
                 if (analyticsBusy) Text("Updating historical analytics in background…", style = MaterialTheme.typography.bodySmall)
                 }
                 if (activeSection == "research") {
-                Text("Pattern research · exploratory + verified", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Pattern research · exploratory + verified", "पैटर्न रिसर्च · खोज + सत्यापन", "पॅटर्न संशोधन · शोध + पडताळणी"), style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Analysis input: ${researchRecords.size} valid historical rows (${chartBuild.records.size} consensus + ${chartBuild.singleSourceUnverifiedGroups.size} single-source groups) · Conflicts excluded: ${chartBuild.conflictGroups.size} · Pending/missing excluded: ${chartBuild.noPublishedResultGroups.size} · Invalid excluded: ${chartBuild.invalidGroups.size}",
                     style = MaterialTheme.typography.bodySmall
@@ -805,7 +805,7 @@ private fun RelabHome(
                 } else {
                     patternAnalyses.forEach { analysis -> PatternResearchCard(analysis) }
                 }
-                Text("Market Intelligence · market-specific behaviour", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Market Intelligence · market-specific behaviour", "मार्केट इंटेलिजेंस · मार्केट अनुसार व्यवहार", "मार्केट इंटेलिजन्स · मार्केटनुसार वर्तन"), style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Each market is analysed independently. Recent-vs-older distribution changes are descriptive alerts, not future-result predictions.",
                     style = MaterialTheme.typography.bodySmall
@@ -815,7 +815,7 @@ private fun RelabHome(
                 } else {
                     intelligenceReports.forEach { MarketIntelligenceCard(it) }
                 }
-                Text("Self-learning reverse engineering · discovered rules", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Self-learning reverse engineering · discovered rules", "सेल्फ-लर्निंग रिवर्स इंजीनियरिंग · मिले हुए नियम", "सेल्फ-लर्निंग रिव्हर्स इंजिनिअरिंग · सापडलेले नियम"), style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Rules are mined separately per market/session from multi-source consensus records only. Support and baseline lift are historical evidence, not guaranteed prediction accuracy.",
                     style = MaterialTheme.typography.bodySmall
@@ -853,7 +853,7 @@ private fun RelabHome(
                         }
                     }
                 }
-                Text("Next draw candidate research", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Next draw candidate research", "अगले रिजल्ट के कैंडिडेट", "पुढील निकालाचे उमेदवार"), style = MaterialTheme.typography.titleLarge)
                 if (candidateSets.isEmpty()) {
                     Text("No usable published history yet. Candidates require at least 5 earlier valid rows; single-source results are exploratory and remain unverified.")
                 } else {
@@ -861,7 +861,7 @@ private fun RelabHome(
                         CandidateResearchCard(open, close, jodi)
                     }
                 }
-                Text("Candidate walk-forward backtest · chronological", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Candidate walk-forward backtest · chronological", "कैंडिडेट वॉक-फॉरवर्ड बैकटेस्ट · तारीख क्रम", "कॅन्डिडेट वॉक-फॉरवर्ड बॅकटेस्ट · कालक्रमानुसार"), style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Consensus-only and single-source-inclusive exploratory backtests are shown separately. Every target is ranked using only eligible earlier dates.",
                     style = MaterialTheme.typography.bodySmall
@@ -873,7 +873,7 @@ private fun RelabHome(
                 }
                 }
                 if (activeSection == "audit") {
-                Text("Historical coverage audit", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Historical coverage audit", "पुराने डेटा की कवरेज जांच", "ऐतिहासिक डेटा कव्हरेज तपासणी"), style = MaterialTheme.typography.titleLarge)
                 if (coverageReports.isEmpty()) {
                     Text("Coverage audit will appear after source data is imported.")
                 } else {
@@ -885,7 +885,7 @@ private fun RelabHome(
                         }
                     }
                 }
-                Text("Per-URL publisher coverage", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Per-URL publisher coverage", "हर URL की पब्लिशर कवरेज", "प्रत्येक URL ची प्रकाशक कव्हरेज"), style = MaterialTheme.typography.titleLarge)
                 if (publisherCoverageReports.isEmpty()) {
                     Text("Add a chart URL to start tracking date-wise coverage for each publisher URL.")
                 } else {
@@ -893,7 +893,7 @@ private fun RelabHome(
                         PublisherCoverageReportCard(coverage, sourceStatuses)
                     }
                 }
-                Text("Repeated source-record audit", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Repeated source-record audit", "दोहराए गए सोर्स रिकॉर्ड की जांच", "पुनरावृत्ती झालेल्या स्रोत नोंदींची तपासणी"), style = MaterialTheme.typography.titleLarge)
                 if (repeatedSourceRecords.isEmpty()) {
                     Text("No repeated source-record IDs found. Records without a source record ID are not guessed or grouped.")
                 } else {
@@ -905,7 +905,7 @@ private fun RelabHome(
                 } else {
                     RepeatedPublishedResultAuditCard(repeatedPublishedResults)
                 }
-                Text("Publisher-specific chart history", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Publisher-specific chart history", "हर पब्लिशर का अलग चार्ट इतिहास", "प्रत्येक प्रकाशकाचा स्वतंत्र चार्ट इतिहास"), style = MaterialTheme.typography.titleLarge)
                 // A separate chart/history is rendered for every URL. Publisher identity
                 // remains shared across that publisher's URLs for evidence counting.
                 val sourceChartGroups = observations.groupBy {
@@ -928,7 +928,7 @@ private fun RelabHome(
                         }
                     }
                 }
-                Text("Recent source observations", style = MaterialTheme.typography.titleLarge)
+                Text(uiText(uiLanguage, "Recent source observations", "हाल के सोर्स रिकॉर्ड", "अलीकडील स्रोत नोंदी"), style = MaterialTheme.typography.titleLarge)
                 if (groups.isEmpty()) {
                     Text("No source records loaded.")
                 } else {
