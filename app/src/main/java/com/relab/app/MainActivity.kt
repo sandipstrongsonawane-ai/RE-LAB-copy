@@ -689,6 +689,7 @@ private fun RelabHome(
                         }
                     }
                 }
+                if (analyticsBusy) Text("Updating historical analytics in background…", style = MaterialTheme.typography.bodySmall)
                 Text("Pattern research · exploratory + verified", style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Analysis input: ${researchRecords.size} valid historical rows (${chartBuild.records.size} consensus + ${chartBuild.singleSourceUnverifiedGroups.size} single-source groups) · Conflicts excluded: ${chartBuild.conflictGroups.size} · Pending/missing excluded: ${chartBuild.noPublishedResultGroups.size} · Invalid excluded: ${chartBuild.invalidGroups.size}",
@@ -1233,57 +1234,65 @@ private fun refreshRegisteredSources(
     updateBusy(true)
     updateMessage("Refreshing ${enabledSources.size} chart sources independently…")
     Thread {
-        val report = com.relab.core.MarketSourceRefreshEngine.refresh(
-            sources = enabledSources,
-            fetch = { source ->
-                val connection = URL(source.url).openConnection() as HttpURLConnection
-                connection.instanceFollowRedirects = true
-                connection.connectTimeout = 15000
-                connection.readTimeout = 20000
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("User-Agent", "RE-LAB-Android/0.1")
-                connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+        try {
+    
+                sources = enabledSources,
+                fetch = { source ->
+                    val connection = URL(source.url).openConnection() as HttpURLConnection
+                    connection.instanceFollowRedirects = true
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 20000
+                    connection.requestMethod = "GET"
+                    connection.setRequestProperty("User-Agent", "RE-LAB-Android/0.1")
+                    connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+                    try {
+                        val code = connection.responseCode
+                        require(code in 200..299) { "HTTP $code" }
+                        val contentType = connection.contentType.orEmpty().lowercase()
+                        require(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.isBlank()) {
+                            "Unsupported content type: $contentType"
+                        }
+                        val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
+                        com.relab.core.FetchedChartPage(bytes.toString(Charsets.UTF_8), connection.url.toString())
+                    } finally {
+                        connection.disconnect()
+                    }
+                },
+                retrievedAt = { java.time.Instant.now() }
+            )
+            // Merge and persist fetched observations off the UI thread.
+            val merged = if (report.observations.isNotEmpty()) save(report.observations) else null
+            mainHandler.post {
                 try {
-                    val code = connection.responseCode
-                    require(code in 200..299) { "HTTP $code" }
-                    val contentType = connection.contentType.orEmpty().lowercase()
-                    require(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.isBlank()) {
-                        "Unsupported content type: $contentType"
+                    val extracted = report.observations
+                    if (merged != null) updateObservations(merged)
+                    val checkedAt = java.time.Instant.now().toString()
+                    updateStatuses(report.outcomes.associate { outcome ->
+                        val state = if (outcome.errorMessage == null) {
+                            "OK · ${outcome.observations.size} rows · $checkedAt"
+                        } else {
+                            "FAILED · ${outcome.errorMessage} · $checkedAt"
+                        }
+                        outcome.source.url to state
+                    })
+                    val detail = report.outcomes.joinToString(" | ") { outcome ->
+                        when {
+                            outcome.errorMessage != null -> "${outcome.source.sourceId}: UNSUPPORTED/FAILED (${outcome.errorMessage})"
+                            outcome.observations.isEmpty() -> "${outcome.source.sourceId}: no rows parsed; skipped ${outcome.skippedRows}; parser support required"
+                            else -> "${outcome.source.sourceId}: ${outcome.observations.size} rows; issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
+                        }
                     }
-                    val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
-                    com.relab.core.FetchedChartPage(bytes.toString(Charsets.UTF_8), connection.url.toString())
+                    updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted. ${detail}")
+                } catch (error: Exception) {
+                    updateMessage("Refresh save failed: ${error.message ?: "Unknown error"}")
                 } finally {
-                    connection.disconnect()
+                    updateBusy(false)
                 }
-            },
-            retrievedAt = { java.time.Instant.now() }
-        )
-        // Merge and persist fetched observations off the UI thread.
-        val merged = if (report.observations.isNotEmpty()) save(report.observations) else null
-        mainHandler.post {
-            try {
-                val extracted = report.observations
-                if (merged != null) updateObservations(merged)
-                val checkedAt = java.time.Instant.now().toString()
-                updateStatuses(report.outcomes.associate { outcome ->
-                    val state = if (outcome.errorMessage == null) {
-                        "OK · ${outcome.observations.size} rows · $checkedAt"
-                    } else {
-                        "FAILED · ${outcome.errorMessage} · $checkedAt"
-                    }
-                    outcome.source.url to state
-                })
-                val detail = report.outcomes.joinToString(" | ") { outcome ->
-                    when {
-                        outcome.errorMessage != null -> "${outcome.source.sourceId}: UNSUPPORTED/FAILED (${outcome.errorMessage})"
-                        outcome.observations.isEmpty() -> "${outcome.source.sourceId}: no rows parsed; skipped ${outcome.skippedRows}; parser support required"
-                        else -> "${outcome.source.sourceId}: ${outcome.observations.size} rows; issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
-                    }
-                }
-                updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted. ${detail}")
-            } catch (error: Exception) {
-                updateMessage("Refresh save failed: ${error.message ?: "Unknown error"}")
-            } finally {
+            }
+    
+        } catch (error: Exception) {
+            mainHandler.post {
+                updateMessage("Refresh failed: ${error.message ?: "Unknown error"}")
                 updateBusy(false)
             }
         }
