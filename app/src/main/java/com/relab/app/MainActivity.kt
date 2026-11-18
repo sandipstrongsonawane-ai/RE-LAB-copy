@@ -819,7 +819,7 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Market Intelligence · market-specific behaviour", "मार्केट इंटेलिजेंस · मार्केट अनुसार व्यवहार", "मार्केट इंटेलिजन्स · मार्केटनुसार वर्तन"), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Each market is analysed independently. Recent-vs-older distribution changes are descriptive alerts, not future-result predictions.",
+                    uiText(uiLanguage, "Each market is analysed independently. Recent-vs-older distribution changes are descriptive alerts, not future-result predictions.", "हर मार्केट का अलग विश्लेषण होता है। हाल के और पुराने डेटा में बदलाव केवल जानकारी है, भविष्य के परिणाम की भविष्यवाणी नहीं।", "प्रत्येक मार्केटचे स्वतंत्र विश्लेषण होते. अलीकडील आणि जुन्या डेटामधील बदल ही केवळ माहिती आहे; भविष्यातील निकालाची भविष्यवाणी नाही."),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (intelligenceReports.isEmpty()) {
@@ -829,7 +829,7 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Self-learning reverse engineering · discovered rules", "सेल्फ-लर्निंग रिवर्स इंजीनियरिंग · मिले हुए नियम", "सेल्फ-लर्निंग रिव्हर्स इंजिनिअरिंग · सापडलेले नियम"), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Rules are mined separately per market/session from multi-source consensus records only. Support and baseline lift are historical evidence, not guaranteed prediction accuracy.",
+                    uiText(uiLanguage, "Rules are mined separately per market/session from multi-source consensus records only. Support and baseline lift are historical evidence, not guaranteed prediction accuracy.", "नियम हर मार्केट/सेशन के लिए केवल कई स्वतंत्र सोर्स की सहमति वाले रिकॉर्ड से बनते हैं। सपोर्ट और बेसलाइन सुधार ऐतिहासिक सबूत हैं, गारंटीड सटीकता नहीं।", "नियम प्रत्येक मार्केट/सेशनसाठी अनेक स्वतंत्र स्रोतांच्या सहमतीच्या नोंदींवरून तयार होतात. सपोर्ट आणि बेसलाइनमधील वाढ हा ऐतिहासिक पुरावा आहे; हमखास अचूकता नाही."),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (selfLearningReports.isEmpty()) {
@@ -849,7 +849,7 @@ private fun RelabHome(
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 if (report.hypotheses.isEmpty()) {
-                                    Text("No rule met minimum historical support (${report.minimumSupport}).")
+                                    Text(uiText(uiLanguage, "No rule met minimum historical support (${report.minimumSupport}).", "कोई नियम न्यूनतम पुराने डेटा सपोर्ट (${report.minimumSupport}) तक नहीं पहुंचा।", "कोणताही नियम किमान ऐतिहासिक डेटा सपोर्ट (${report.minimumSupport}) पर्यंत पोहोचला नाही."))
                                 } else {
                                     report.hypotheses.take(5).forEach { hypothesis ->
                                         Text(
@@ -875,7 +875,7 @@ private fun RelabHome(
                 }
                 Text(uiText(uiLanguage, "Candidate walk-forward backtest · chronological", "कैंडिडेट वॉक-फॉरवर्ड बैकटेस्ट · तारीख क्रम", "कॅन्डिडेट वॉक-फॉरवर्ड बॅकटेस्ट · कालक्रमानुसार"), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Consensus-only and single-source-inclusive exploratory backtests are shown separately. Every target is ranked using only eligible earlier dates.",
+                    uiText(uiLanguage, "Consensus-only and single-source-inclusive exploratory backtests are shown separately. Every target is ranked using only eligible earlier dates.", "केवल सहमति वाले और एकल-स्रोत शामिल करने वाले खोजात्मक बैकटेस्ट अलग दिखते हैं। हर टारगेट की रैंकिंग केवल उससे पहले की योग्य तारीखों से होती है।", "फक्त सहमतीच्या आणि एक-स्रोत समाविष्ट केलेल्या शोधात्मक बॅकटेस्टचे निकाल वेगळे दाखवले जातात. प्रत्येक लक्ष्याचे रँकिंग फक्त त्याआधीच्या पात्र तारखांवर होते."),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (candidateWalkForwardReports.isEmpty()) {
@@ -949,7 +949,7 @@ private fun RelabHome(
                     }
                 }
                 }
-                Text("Offline SQLite · Source provenance preserved · Conflicts never auto-resolved", style = MaterialTheme.typography.labelSmall)
+                Text(uiText(uiLanguage, "Offline SQLite · Source provenance preserved · Conflicts never auto-resolved", "ऑफलाइन SQLite · सोर्स की जानकारी सुरक्षित · विरोध अपने-आप हल नहीं होते", "ऑफलाइन SQLite · स्रोताची माहिती जतन · विसंगती आपोआप सोडवल्या जात नाहीत"), style = MaterialTheme.typography.labelSmall)
             }
         }
     }
