@@ -273,7 +273,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         )
         assertEquals(7, mainBazar.observations.size)
         assertEquals("110-29-270", mainBazar.observations.first().normalizedResult)
-        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR,
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE,
             mainBazar.observations.single { it.date == LocalDate.parse("2026-11-07") }.status)
 
         val mainNight = parse(
