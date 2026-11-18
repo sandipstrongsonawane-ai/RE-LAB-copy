@@ -376,7 +376,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         )
         assertEquals(12, result.observations.size)
         assertEquals("780-51-489", result.observations.first().normalizedResult)
-        assertEquals(ObservationStatus.PENDING, result.observations[6].status)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, result.observations[6].status)
         assertEquals("sattamatkai.in", result.observations.first().sourceId)
     }
 }
