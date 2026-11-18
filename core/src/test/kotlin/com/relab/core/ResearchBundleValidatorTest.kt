@@ -19,7 +19,7 @@ class ResearchBundleValidatorTest {
         )
         val result = ResearchBundleValidator.validate(bytes)
         assertTrue(result.errors.joinToString(), result.valid)
-        assertEquals(13, result.verifiedFiles)
+        assertEquals(14, result.verifiedFiles)
     }
 
     @Test
