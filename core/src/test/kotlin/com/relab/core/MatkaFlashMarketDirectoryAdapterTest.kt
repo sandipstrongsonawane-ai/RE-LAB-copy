@@ -24,6 +24,27 @@ class MatkaFlashMarketDirectoryAdapterTest {
         assertEquals("PUNA_BAZAR", sources.single { it.market.name == "PUNA_BAZAR" }.market.name)
     }
 
+    @Test fun acceptsCanonicalDirectoryUrlAfterQueryRedirect() {
+        val html = """<a href="/kalyan/panel-chart">Panel Chart</a>"""
+        assertEquals(
+            listOf("KALYAN"),
+            MatkaFlashMarketDirectoryAdapter.discover(html, "https://matkaflash.com/charts").map { it.market.name }
+        )
+        assertEquals(
+            listOf("KALYAN"),
+            MatkaFlashMarketDirectoryAdapter.discover(html, "https://matkaflash.com/charts?type=panel").map { it.market.name }
+        )
+    }
+
+    @Test fun rejectsUnrelatedDirectoryQuery() {
+        assertThrows(IllegalArgumentException::class.java) {
+            MatkaFlashMarketDirectoryAdapter.discover(
+                """<a href="/kalyan/panel-chart">Panel Chart</a>""",
+                "https://matkaflash.com/charts?type=jodi"
+            )
+        }
+    }
+
     @Test fun rejectsUnrelatedDirectoryHostsAndPaths() {
         val html = """<a href="/foo/panel-chart">Panel Chart</a>"""
         assertThrows(IllegalArgumentException::class.java) {
