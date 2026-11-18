@@ -15,17 +15,13 @@ object UserMarketSourceRegistry {
         return existing + source.copy(url = normalized)
     }
 
-    fun update(existing: List<MarketSource>, sourceId: String, updated: MarketSource): List<MarketSource> {
-        require(existing.any { it.sourceId == sourceId && it.url == updated.url }) {
-            "The source to update was not found."
-        }
+    fun update(existing: List<MarketSource>, originalUrl: String, updated: MarketSource): List<MarketSource> {
+        require(existing.any { it.url == originalUrl }) { "The source to update was not found." }
         val normalized = normalizeUrl(updated.url)
-        require(existing.none { it.sourceId != sourceId && normalizeUrl(it.url) == normalized }) {
+        require(existing.none { it.url != originalUrl && normalizeUrl(it.url) == normalized }) {
             "This exact chart URL is already registered."
         }
-        return existing.map {
-            if (it.sourceId == sourceId && it.url == updated.url) updated.copy(url = normalized) else it
-        }
+        return existing.map { if (it.url == originalUrl) updated.copy(url = normalized) else it }
     }
 
     fun setEnabled(existing: List<MarketSource>, url: String, enabled: Boolean): List<MarketSource> =
