@@ -535,6 +535,15 @@ private fun RelabHome(
                 Text(uiText(uiLanguage, "Paste a supported chart URL. RE-LAB detects the market from its source path.", "सपोर्टेड चार्ट URL डालें। RE-LAB सोर्स पाथ से मार्केट पहचानता है।", "समर्थित चार्ट URL पेस्ट करा. RE-LAB सोर्स पाथवरून मार्केट ओळखते."))
                 Text(uiText(uiLanguage, "Aaj ka market research · Day / Night", "आज का मार्केट रिसर्च · डे / नाइट", "आजचे मार्केट संशोधन · डे / नाइट"), style = MaterialTheme.typography.titleLarge)
                 Text(uiText(uiLanguage, "Har market ka latest result, next research candidates aur unka evidence yahin dikhega. Score chance % nahi hai; sirf historical pattern index hai.", "हर मार्केट का ताज़ा रिजल्ट, अगले रिसर्च कैंडिडेट और उनका आधार यहां दिखेगा। स्कोर जीतने की संभावना नहीं, सिर्फ पुराने पैटर्न का इंडेक्स है।", "प्रत्येक मार्केटचा ताजा निकाल, पुढील संशोधन उमेदवार आणि त्यांचा आधार येथे दिसेल. स्कोअर जिंकण्याची शक्यता नाही; तो फक्त ऐतिहासिक पॅटर्न इंडेक्स आहे."), style = MaterialTheme.typography.bodySmall)
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("ROW CROSS-CHECK · DATA QUALITY", style = MaterialTheme.typography.titleMedium)
+                        Text("Rows checked: ${groups.size} market-date groups · Consensus: ${groups.count { it.state == ReconciliationState.CONSENSUS }} · Single-source: ${groups.count { it.state == ReconciliationState.SINGLE_SOURCE_UNVERIFIED }}", style = MaterialTheme.typography.bodySmall)
+                        Text("Conflicts: ${conflicts} · No published result: ${groups.count { it.state == ReconciliationState.NO_PUBLISHED_RESULT }} · Invalid chart rows: ${chartBuild.invalidGroups.size}", style = MaterialTheme.typography.bodySmall)
+                        Text("Repeated source-record IDs: ${repeatedSourceRecords.size} · Same result across dates review flags: ${repeatedPublishedResults.size}", style = MaterialTheme.typography.bodySmall)
+                        Text("Conflict rows are never silently merged. Single-source rows stay unverified; original source rows remain preserved.", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
                 if (candidateSets.isEmpty()) {
                     Text(uiText(uiLanguage, "Abhi market sources register nahi hue. Sources tab check karein.", "अभी मार्केट सोर्स रजिस्टर नहीं हुए। Sources टैब देखें।", "अद्याप मार्केट स्रोत नोंदलेले नाहीत. Sources टॅब तपासा."))
                 } else {
