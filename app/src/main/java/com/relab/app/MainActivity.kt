@@ -135,6 +135,8 @@ private fun uiText(language: String, hinglish: String, hindi: String, marathi: S
         else -> hinglish
     }
 
+private data class InitialAppData(val csv: String?, val observations: List<com.relab.core.SourceObservation>, val predictionLedger: com.relab.core.PredictionLearningLedger)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -142,17 +144,6 @@ class MainActivity : ComponentActivity() {
         val preferences = getSharedPreferences("relab_local", MODE_PRIVATE)
         val initialMarketSources = loadMarketSources(preferences)
         val initialSourceStatuses = loadSourceStatuses(preferences)
-
-        // One-time migration from the first CSV-only build. Keep the old preference
-        // until the database transaction succeeds so a failed migration is recoverable.
-        val legacyCsv = preferences.getString("source_csv", null)
-        if (database.loadOriginalCsv() == null && !legacyCsv.isNullOrBlank()) {
-            val legacyReport = SourceCsvImporter.import(legacyCsv)
-            if (legacyReport.observations.isNotEmpty()) {
-                database.replaceDataset(legacyCsv, legacyReport.observations)
-                preferences.edit().remove("source_csv").apply()
-            }
-        }
 
         val initialCoverageRanges = preferences.all.mapNotNull { (key, value) ->
             if (!key.startsWith(COVERAGE_RANGE_PREFIX) || value !is String) return@mapNotNull null
@@ -175,9 +166,17 @@ class MainActivity : ComponentActivity() {
                 onSaveCoverageRange = { key, start, end ->
                     preferences.edit().putString(COVERAGE_RANGE_PREFIX + key, "$start|$end").apply()
                 },
-                initialCsv = database.loadOriginalCsv(),
-                initialObservations = database.loadObservations(),
-                initialPredictionLedger = database.loadPredictionLedger(),
+                loadInitialData = {
+                    val legacyCsv = preferences.getString("source_csv", null)
+                    if (database.loadOriginalCsv() == null && !legacyCsv.isNullOrBlank()) {
+                        val legacyReport = SourceCsvImporter.import(legacyCsv)
+                        if (legacyReport.observations.isNotEmpty()) {
+                            database.replaceDataset(legacyCsv, legacyReport.observations)
+                            preferences.edit().remove("source_csv").apply()
+                        }
+                    }
+                    InitialAppData(database.loadOriginalCsv(), database.loadObservations(), database.loadPredictionLedger())
+                },
                 onSaveLockedPrediction = { database.appendLockedPrediction(it) },
                 onSavePredictionVerification = { database.appendPredictionVerification(it) },
                 onRestoreResearchBundle = { csv, importedObservations, ledger ->
@@ -216,9 +215,7 @@ private fun RelabHome(
     onSaveMarketSources: (List<MarketSource>) -> Unit,
     initialSourceStatuses: Map<String, String>,
     onSaveSourceStatuses: (Map<String, String>) -> Unit,
-    initialCsv: String?,
-    initialObservations: List<com.relab.core.SourceObservation>,
-    initialPredictionLedger: com.relab.core.PredictionLearningLedger,
+    loadInitialData: suspend () -> InitialAppData,
     onSaveLockedPrediction: (com.relab.core.LockedSidePrediction) -> Unit,
     onSavePredictionVerification: (com.relab.core.PredictionVerification) -> Unit,
     onRestoreResearchBundle: (String, List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger) -> Pair<List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger>,
@@ -234,9 +231,23 @@ private fun RelabHome(
     var activeSection by remember { mutableStateOf("home") }
     var showLedgerDetails by remember { mutableStateOf(false) }
     var showDatasetDetails by remember { mutableStateOf(false) }
-    var rawCsv by remember { mutableStateOf(initialCsv) }
-    var observations by remember { mutableStateOf(initialObservations) }
-    var predictionLedger by remember { mutableStateOf(initialPredictionLedger) }
+    var rawCsv by remember { mutableStateOf<String?>(null) }
+    var observations by remember { mutableStateOf(emptyList<com.relab.core.SourceObservation>()) }
+    var predictionLedger by remember { mutableStateOf(com.relab.core.PredictionLearningLedger(emptyList(), emptyList())) }
+    var initialDataLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadInitialData() }
+            rawCsv = loaded.csv
+            observations = loaded.observations
+            predictionLedger = loaded.predictionLedger
+        } catch (error: Exception) {
+            importMessage = "Local data load failed: " + (error.message ?: "Unknown error")
+        } finally {
+            initialDataLoaded = true
+        }
+    }
     var importMessage by remember { mutableStateOf<String?>(null) }
     var chartUrl by remember { mutableStateOf("") }
     var marketSources by remember { mutableStateOf(initialMarketSources) }
@@ -310,7 +321,8 @@ private fun RelabHome(
     var coverageRangeOverrides by remember { mutableStateOf(initialCoverageRanges) }
     var dashboardAnalytics by remember { mutableStateOf<DashboardAnalytics?>(null) }
     var analyticsBusy by remember { mutableStateOf(false) }
-    LaunchedEffect(observations, predictionLedger, coverageRangeOverrides, marketSources) {
+    LaunchedEffect(observations, predictionLedger, coverageRangeOverrides, marketSources, initialDataLoaded) {
+        if (!initialDataLoaded) return@LaunchedEffect
         val snapshot = observations
         val ranges = coverageRangeOverrides
         dashboardAnalytics = null
