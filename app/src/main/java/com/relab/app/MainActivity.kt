@@ -437,6 +437,7 @@ private fun RelabHome(
                         }
                         content
                     } ?: error("Verified bundle has no source-observations.csv")
+                    val parsed = SourceCsvImporter.import(sourceCsv)
                     val ledgerCsv = ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
                         var content: String? = null
                         while (true) {
