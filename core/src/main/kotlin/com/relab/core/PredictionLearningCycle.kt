@@ -65,6 +65,13 @@ data class PredictionLearningLedger(
         require(verifications.all { result -> lockedPredictions.any { it.id == result.predictionId } }) {
             "Verification must refer to a previously locked prediction."
         }
+        require(verifications.groupBy { it.predictionId }.values.all { attempts ->
+            val ordered = attempts.sortedBy { it.attempt }
+            ordered.map { it.attempt } == (1..ordered.size).toList() &&
+                ordered.dropLast(1).all { it.grade == PredictionGrade.GREY }
+        }) {
+            "Verification attempts must be sequential; GREEN/RED grades are terminal."
+        }
     }
 
     fun performance(market: Market, sessionId: String, side: PannaSide): LearningPerformance {
