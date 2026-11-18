@@ -67,18 +67,21 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
             }
             val (start, end) = range
             val expectedDays = java.time.temporal.ChronoUnit.DAYS.between(start, end).toInt() + 1
+            val expectedWeekdays = (0 until matrix.dayColumns.size)
+                .map { ((start.dayOfWeek.value - 1 + it) % 7) + 1 }
             if (expectedDays !in 5..7 || expectedDays != matrix.dayColumns.size ||
-                matrix.dayColumns.map { it.second } != (start.dayOfWeek.value..end.dayOfWeek.value).toList() ||
-                start.dayOfWeek.value > end.dayOfWeek.value
+                end != start.plusDays((expectedDays - 1).toLong()) ||
+                matrix.dayColumns.map { it.second } != expectedWeekdays
             ) {
                 skipped++
                 issues += "Weekly row ${rowIndex + 2}: date range does not match detected weekday columns"
                 return@forEachIndexed
             }
 
-            matrix.dayColumns.forEach { (columnIndex, weekday) ->
-                val date = start.plusDays((weekday - start.dayOfWeek.value).toLong())
-                if (date.isAfter(end) || date.dayOfWeek.value !in market.activeDays.map { it.value }) {
+            matrix.dayColumns.forEachIndexed { dayOffset, (columnIndex, weekday) ->
+                val date = start.plusDays(dayOffset.toLong())
+                if (date.dayOfWeek.value != weekday || date.isAfter(end) ||
+                    date.dayOfWeek.value !in market.activeDays.map { it.value }) {
                     return@forEachIndexed
                 }
                 val cell = cells[columnIndex]
@@ -132,8 +135,10 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
             val days = labels.mapIndexedNotNull { index, label ->
                 weekdayAliases[label]?.let { index to it }
             }
+            val cyclicWeekdays = if (days.isEmpty()) emptyList() else
+                (0 until days.size).map { ((days.first().second - 1 + it) % 7) + 1 }
             if (days.size in 5..7 && days.map { it.second }.distinct().size == days.size &&
-                days.map { it.second } == (days.first().second..days.last().second).toList()
+                days.map { it.second } == cyclicWeekdays
             ) return Matrix(table, dateIndex, days)
         }
         return null
