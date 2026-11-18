@@ -862,7 +862,14 @@ private fun RelabHome(
                                         onSaveMarketSources(marketSources)
                                     }) { Text(uiText(uiLanguage, "Remove", "हटाएं", "काढा")) }
                                     OutlinedButton(enabled = source.enabled && !linkBusy, onClick = {
-                                        refreshRegisteredSources(listOf(source), onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
+                                        refreshRegisteredSources(listOf(source), onSaveLinkObservations, { snapshots ->
+                                            onSaveSourceSnapshots(snapshots)
+                                            Handler(Looper.getMainLooper()).post {
+                                                sourceSnapshots = (sourceSnapshots + snapshots).distinctBy {
+                                                    listOf(it.sourceId, it.market.name, it.sessionId, it.requestedUrl, it.retrievedAt.toString(), it.sha256).joinToString("|")
+                                                }
+                                            }
+                                        }, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
                                     }) { Text(uiText(uiLanguage, "Refresh", "रिफ्रेश", "रिफ्रेश")) }
                                 }
                             }
