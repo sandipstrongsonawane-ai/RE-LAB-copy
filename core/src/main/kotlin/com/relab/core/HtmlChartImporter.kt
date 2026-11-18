@@ -56,46 +56,73 @@ object HtmlChartImporter {
                 Market.SRIDEVI, Market.SRIDEVI_NIGHT -> setOf(7)
             }
             val rangeDates = rangePattern.findAll(cells.first()).mapNotNull { parseDate(it.value) }.toList()
-            val isThreeCellLayout = dayCellTotal % 3 == 0
-            val dayCount = if (isThreeCellLayout) dayCellTotal / 3 else -1
+            val threeCellDayCount = if (dayCellTotal % 3 == 0) dayCellTotal / 3 else -1
+            val oneCellDayCount = dayCellTotal
+            val oneCellLayout = oneCellDayCount in allowedDayCounts
+            val threeCellLayout = threeCellDayCount in allowedDayCounts
+            val dayCount = when {
+                oneCellLayout -> oneCellDayCount
+                threeCellLayout -> threeCellDayCount
+                else -> -1
+            }
             if (weekStart != null && dayCount in allowedDayCounts) {
                 if (weekStart.dayOfWeek != java.time.DayOfWeek.MONDAY ||
                     rangeDates.size != 2 ||
                     java.time.temporal.ChronoUnit.DAYS.between(rangeDates[0], rangeDates[1]).toInt() + 1 != dayCount) {
-                    issues += "Week row ${index + 1}: date range and three-cell day groups do not match"
+                    issues += "Week row ${index + 1}: date range and weekly cell groups do not match"
                     skipped++
                     return@forEachIndexed
                 }
-                cells.drop(1).chunked(3).forEachIndexed { dayOffset, parts ->
+                val dailyCells = if (oneCellLayout) cells.drop(1).map { listOf(it) } else cells.drop(1).chunked(3)
+                dailyCells.forEachIndexed { dayOffset, parts ->
                     val date = weekStart.plusDays(dayOffset.toLong())
                     val rawCell = parts.joinToString(" | ")
+                    val rawLower = rawCell.lowercase(Locale.ROOT)
+                    if (oneCellLayout) {
+                        val digits = rawCell.filter(Char::isDigit)
+                        val statusOnly = when {
+                            rawCell.isBlank() || rawCell.contains('*') || rawCell.matches(Regex("[-—–\\s]+")) ->
+                                ObservationStatus.MISSING_FROM_SOURCE
+                            Regex("\\b(?:holiday|closed|market off|no market|weekly off)\\b").containsMatchIn(rawLower) ->
+                                ObservationStatus.HOLIDAY_CLOSED
+                            Regex("\\b(?:pending|awaiting|not declared)\\b").containsMatchIn(rawLower) ->
+                                ObservationStatus.PENDING
+                            else -> null
+                        }
+                        if (statusOnly != null) {
+                            observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, null, statusOnly)
+                            return@forEachIndexed
+                        }
+                        if (digits.length != 8) {
+                            issues += "Week row ${index + 1}, day ${dayOffset + 1}: unrecognized single-cell result '$rawCell'"
+                            observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, null, ObservationStatus.MALFORMED)
+                            return@forEachIndexed
+                        }
+                        val result = "${digits.substring(0, 3)}-${digits.substring(3, 5)}-${digits.substring(5, 8)}"
+                        val status = validateResult(result, market, date, host, retrievedAt, sessionId)
+                        observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, result.takeIf { status == ObservationStatus.PUBLISHED }, status)
+                        if (status == ObservationStatus.MALFORMED) {
+                            issues += "Week row ${index + 1}, day ${dayOffset + 1}: Panna/Jodi validation failed ($result)"
+                        }
+                        return@forEachIndexed
+                    }
                     val open = parts[0].filter { it.isDigit() || it == '*' }
                     val jodi = parts[1].filter { it.isDigit() || it == '*' }
                     val close = parts[2].filter { it.isDigit() || it == '*' }
                     val compact = open + jodi + close
-                    val hasMarker = compact.contains('*')
-                    if (compact.isEmpty() || hasMarker) {
-                        observations += observation(
-                            market, sessionId, date, host, pageUrl, retrievedAt,
-                            rawCell, null, ObservationStatus.MISSING_FROM_SOURCE
-                        )
+                    if (compact.isEmpty() || compact.contains('*')) {
+                        observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, null, ObservationStatus.MISSING_FROM_SOURCE)
                         return@forEachIndexed
                     }
                     if (open.length != 3 || jodi.length != 2 || close.length != 3 ||
                         !(open + jodi + close).all(Char::isDigit)) {
                         issues += "Week row ${index + 1}, day ${dayOffset + 1}: unrecognized three-cell result '$rawCell'"
-                        observations += observation(
-                            market, sessionId, date, host, pageUrl, retrievedAt,
-                            rawCell, null, ObservationStatus.MALFORMED
-                        )
+                        observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, null, ObservationStatus.MALFORMED)
                         return@forEachIndexed
                     }
                     val result = "$open-$jodi-$close"
                     val status = validateResult(result, market, date, host, retrievedAt, sessionId)
-                    observations += observation(
-                        market, sessionId, date, host, pageUrl, retrievedAt,
-                        rawCell, result.takeIf { status == ObservationStatus.PUBLISHED }, status
-                    )
+                    observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, result.takeIf { status == ObservationStatus.PUBLISHED }, status)
                     if (status == ObservationStatus.MALFORMED) {
                         issues += "Week row ${index + 1}, day ${dayOffset + 1}: Panna/Jodi validation failed ($result)"
                     }
