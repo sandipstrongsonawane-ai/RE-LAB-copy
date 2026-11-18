@@ -12,7 +12,9 @@ data class PannaCandidate(
     val exactHistoricalCount: Int,
     val familyHistoricalCount: Int,
     val weekdayFamilyCount: Int,
-    val previousFamilyTransitionCount: Int
+    val previousFamilyTransitionCount: Int,
+    val verifiedFeedbackExposure: Int = 0,
+    val verifiedFeedbackHitRate: Double? = null
 )
 
 data class JodiCandidate(
@@ -47,7 +49,8 @@ object CandidateRankingEngine {
         side: PannaSide,
         limit: Int = 10,
         minimumHistory: Int = 5,
-        allowSingleSourceExploration: Boolean = false
+        allowSingleSourceExploration: Boolean = false,
+        learningLedger: PredictionLearningLedger = PredictionLearningLedger()
     ): CandidateRanking {
         require(sessionId.isNotBlank()) { "Session ID is required" }
         require(limit in 1..100) { "Candidate limit must be between 1 and 100" }
@@ -59,7 +62,7 @@ object CandidateRankingEngine {
             ReconciledChartBuilder.build(observations).records
         }
         return rankRecords(
-            sourceRecords, market, sessionId, targetDate, side, limit, minimumHistory
+            sourceRecords, market, sessionId, targetDate, side, limit, minimumHistory, learningLedger
         )
     }
 
@@ -74,7 +77,8 @@ object CandidateRankingEngine {
         targetDate: LocalDate,
         side: PannaSide,
         limit: Int = 10,
-        minimumHistory: Int = 5
+        minimumHistory: Int = 5,
+        learningLedger: PredictionLearningLedger = PredictionLearningLedger()
     ): CandidateRanking {
         require(sessionId.isNotBlank()) { "Session ID is required" }
         require(limit in 1..100) { "Candidate limit must be between 1 and 100" }
@@ -114,6 +118,9 @@ object CandidateRankingEngine {
         val maxWeekday = weekdayCounts.values.maxOrNull()?.coerceAtLeast(1) ?: 1
         val maxTransition = transitionCounts.values.maxOrNull()?.coerceAtLeast(1) ?: 1
 
+        val feedback = VerifiedPredictionFeedbackEngine.analyze(
+            learningLedger, market, sessionId, targetDate, side
+        )
         val ranked = (0..999).map { value ->
             val panna = value.toString().padStart(3, '0')
             val family = familySequence(panna)
@@ -123,15 +130,21 @@ object CandidateRankingEngine {
             val transition = transitionCounts["$previousState>$family"] ?: 0
             // Components are normalized independently; Jodi is deliberately not scored
             // as an extra feature because it is mathematically derived from the Pannas.
-            val score = (
+            val historicalScore = (
                 0.30 * exact / maxExact +
                     0.35 * familyCount / maxFamily +
                     0.20 * weekday / maxWeekday +
                     0.15 * transition / maxTransition
                 ) * 100.0
+            val familyFeedback = feedback.families[family]
+            val adjustment = familyFeedback?.let {
+                ((it.smoothedHitRate - feedback.baselineSmoothedHitRate) * 10.0).coerceIn(-5.0, 5.0)
+            } ?: 0.0
+            val score = (historicalScore + adjustment).coerceIn(0.0, 100.0)
             PannaCandidate(
                 panna, family, ChartMath.pannaType(panna), score,
-                exact, familyCount, weekday, transition
+                exact, familyCount, weekday, transition,
+                familyFeedback?.exposure ?: 0, familyFeedback?.smoothedHitRate
             )
         }.sortedWith(
             compareByDescending<PannaCandidate> { it.score }
