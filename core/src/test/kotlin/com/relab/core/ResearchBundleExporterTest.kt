@@ -76,4 +76,30 @@ class ResearchBundleExporterTest {
         assertTrue(String(entries.getValue("README.txt"), Charsets.UTF_8).contains("not guaranteed predictions"))
         assertNotNull(bytes)
     }
+
+    @Test
+    fun sourceObservationJsonExportPreservesRawValuesProvenanceAndLeadingZeroes() {
+        val first = SourceObservation(
+            market = Market.SRIDEVI, sessionId = "night",
+            date = LocalDate.parse("2026-11-18"), sourceId = "publisher-a",
+            sourceRecordId = "row-\"07", sourceUrl = "https://publisher.example/chart",
+            retrievedAt = Instant.parse("2026-11-18T18:00:00Z"), publishedAt = null,
+            rawText = "012-07-000\\n*", normalizedResult = "012-07-000",
+            status = ObservationStatus.PUBLISHED
+        )
+        val conflict = first.copy(
+            sourceId = "publisher-b", rawText = "123-45-678",
+            normalizedResult = "123-45-678"
+        )
+        val json = SourceObservationJsonExporter.export(
+            listOf(first, conflict), Instant.parse("2026-11-19T00:00:00Z")
+        )
+        assertTrue(json.contains("\"record_count\": 2"))
+        assertTrue(json.contains("\"session_id\": \"night\""))
+        assertTrue(json.contains("\"raw_text\": \"012-07-000\\\\n*\""))
+        assertTrue(json.contains("\"normalized_result\": \"012-07-000\""))
+        assertTrue(json.contains("\"published_at\": null"))
+        assertTrue(json.contains("\"source_record_id\": \"row-\\\\\"07\""))
+        assertTrue(json.contains("123-45-678"))
+    }
 }
