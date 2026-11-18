@@ -59,16 +59,20 @@ object CandidateWalkForwardEvaluator {
             "End date must be after start date"
         }
 
-        val targetRecords = (if (allowSingleSourceExploration) {
+        val eligibleRecords = (if (allowSingleSourceExploration) {
             ReconciledChartBuilder.buildExploratoryRecords(observations)
         } else {
             ReconciledChartBuilder.build(observations).records
         }).asSequence()
             .filter { it.market == market && it.sessionId == sessionId }
-            .filter { startDateInclusive == null || !it.date.isBefore(startDateInclusive) }
             .filter { endDateExclusive == null || it.date.isBefore(endDateExclusive) }
             .sortedBy { it.date }
             .toList()
+        // The start date limits which rows are scored as targets, not the historical
+        // training window. Earlier eligible records before the start date remain valid.
+        val targetRecords = eligibleRecords.filter {
+            startDateInclusive == null || !it.date.isBefore(startDateInclusive)
+        }
 
         val selectedCounts = mutableMapOf<String, Int>()
         val exactHitsByCandidate = mutableMapOf<String, Int>()
@@ -80,7 +84,13 @@ object CandidateWalkForwardEvaluator {
         var reciprocalRankTotal = 0.0
 
         val priorRecords = mutableListOf<ChartRecord>()
+        var eligibleIndex = 0
         targetRecords.forEach { actual ->
+            while (eligibleIndex < eligibleRecords.size &&
+                eligibleRecords[eligibleIndex].date.isBefore(actual.date)) {
+                priorRecords += eligibleRecords[eligibleIndex]
+                eligibleIndex++
+            }
             val ranking = CandidateRankingEngine.rankRecords(
                 records = priorRecords,
                 market = market,
@@ -111,8 +121,7 @@ object CandidateWalkForwardEvaluator {
                     }
                 }
             }
-            // The actual result enters training only after its own target evaluation.
-            priorRecords += actual
+            // The pointer adds this target only before the next later target is ranked.
         }
 
         val candidateMetrics = selectedCounts.map { (panna, selected) ->
