@@ -128,6 +128,13 @@ private fun loadSourceStatuses(preferences: android.content.SharedPreferences): 
 
 private fun encodeSourceStatuses(statuses: Map<String, String>): String =
     JSONObject().apply { statuses.forEach { (url, status) -> put(url, status) } }.toString()
+private fun uiText(language: String, hinglish: String, hindi: String, marathi: String): String =
+    when (language.lowercase()) {
+        "hindi" -> hindi
+        "marathi" -> marathi
+        else -> hinglish
+    }
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -222,6 +229,9 @@ private fun RelabHome(
     onClearCsv: () -> Unit
 ) {
     val context = LocalContext.current
+    val languagePreferences = remember { context.getSharedPreferences("relab_local", android.content.Context.MODE_PRIVATE) }
+    var uiLanguage by remember { mutableStateOf(languagePreferences.getString("ui_language", "hinglish") ?: "hinglish") }
+    var activeSection by remember { mutableStateOf("home") }
     var rawCsv by remember { mutableStateOf(initialCsv) }
     var observations by remember { mutableStateOf(initialObservations) }
     var predictionLedger by remember { mutableStateOf(initialPredictionLedger) }
@@ -477,6 +487,47 @@ private fun RelabHome(
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("RE-LAB", style = MaterialTheme.typography.headlineLarge)
+                Text(
+                    uiText(uiLanguage, "Offline chart research", "ऑफलाइन चार्ट रिसर्च", "ऑफलाइन चार्ट संशोधन"),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        "home" to uiText(uiLanguage, "Home", "होम", "मुख्य"),
+                        "sources" to uiText(uiLanguage, "Sources", "सोर्स", "स्रोत"),
+                        "backup" to uiText(uiLanguage, "Backup", "बैकअप", "बॅकअप")
+                    ).forEach { (key, label) ->
+                        if (activeSection == key) Button(onClick = { activeSection = key }, modifier = Modifier.weight(1f)) { Text(label) }
+                        else OutlinedButton(onClick = { activeSection = key }, modifier = Modifier.weight(1f)) { Text(label) }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        "research" to uiText(uiLanguage, "Research", "रिसर्च", "संशोधन"),
+                        "audit" to uiText(uiLanguage, "Audit", "ऑडिट", "तपासणी"),
+                        "settings" to uiText(uiLanguage, "Settings", "सेटिंग", "सेटिंग")
+                    ).forEach { (key, label) ->
+                        if (activeSection == key) Button(onClick = { activeSection = key }, modifier = Modifier.weight(1f)) { Text(label) }
+                        else OutlinedButton(onClick = { activeSection = key }, modifier = Modifier.weight(1f)) { Text(label) }
+                    }
+                }
+                if (activeSection == "settings") {
+                    Card {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(uiText(uiLanguage, "App language", "ऐप की भाषा", "अॅपची भाषा"), style = MaterialTheme.typography.titleMedium)
+                            Text(uiText(uiLanguage, "Choose the language for the main navigation and common controls.", "मुख्य मेन्यू और जरूरी बटन की भाषा चुनें।", "मुख्य मेन्यू आणि सामान्य बटणांची भाषा निवडा।"), style = MaterialTheme.typography.bodySmall)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf("hinglish" to "Hinglish", "hindi" to "हिंदी", "marathi" to "मराठी").forEach { (code, label) ->
+                                    if (uiLanguage == code) Button(onClick = { uiLanguage = code; languagePreferences.edit().putString("ui_language", code).apply() }, modifier = Modifier.weight(1f)) { Text(label) }
+                                    else OutlinedButton(onClick = { uiLanguage = code; languagePreferences.edit().putString("ui_language", code).apply() }, modifier = Modifier.weight(1f)) { Text(label) }
+                                }
+                            }
+                            Text(uiText(uiLanguage, "Technical names, imported source text and detailed audit evidence remain in their original form.", "तकनीकी नाम, आयात किए गए सोर्स टेक्स्ट और विस्तृत ऑडिट रिकॉर्ड मूल रूप में रहेंगे।", "तांत्रिक नावे, आयात केलेला स्रोत मजकूर आणि तपशीलवार ऑडिट पुरावे मूळ स्वरूपात राहतील।"), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                if (activeSection == "home") {
+                Text("RE-LAB", style = MaterialTheme.typography.headlineLarge)
                 Text("5 markets · Offline chart research", style = MaterialTheme.typography.titleMedium)
                 Text("Paste any supported chart URL. RE-LAB detects the market from its exact source path.")
                 Card {
@@ -562,6 +613,8 @@ private fun RelabHome(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (linkBusy) "Fetching..." else "Auto-detect market & fetch") }
+                if (activeSection == "sources") {
+                }
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Unlimited chart source manager", style = MaterialTheme.typography.titleMedium)
@@ -655,6 +708,8 @@ private fun RelabHome(
                         }
                     }
                 }
+                if (activeSection == "backup") {
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { picker.launch(arrayOf("text/*", "text/csv", "application/csv")) }) {
@@ -711,7 +766,9 @@ private fun RelabHome(
                         enabled = sourceTiming.isNotEmpty()
                     ) { Text("Export source timing CSV") }
                 }
+                }
                 importMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                if (activeSection == "home") {
                 Card(colors = CardDefaults.cardColors()) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Local dataset", style = MaterialTheme.typography.titleLarge)
@@ -736,6 +793,8 @@ private fun RelabHome(
                     }
                 }
                 if (analyticsBusy) Text("Updating historical analytics in background…", style = MaterialTheme.typography.bodySmall)
+                if (activeSection == "research") {
+                }
                 Text("Pattern research · exploratory + verified", style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Analysis input: ${researchRecords.size} valid historical rows (${chartBuild.records.size} consensus + ${chartBuild.singleSourceUnverifiedGroups.size} single-source groups) · Conflicts excluded: ${chartBuild.conflictGroups.size} · Pending/missing excluded: ${chartBuild.noPublishedResultGroups.size} · Invalid excluded: ${chartBuild.invalidGroups.size}",
@@ -812,6 +871,8 @@ private fun RelabHome(
                 } else {
                     candidateWalkForwardReports.forEach { CandidateWalkForwardCard(it) }
                 }
+                if (activeSection == "audit") {
+                }
                 Text("Historical coverage audit", style = MaterialTheme.typography.titleLarge)
                 if (coverageReports.isEmpty()) {
                     Text("Coverage audit will appear after source data is imported.")
@@ -874,6 +935,7 @@ private fun RelabHome(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         groups.asReversed().take(30).forEach { group -> SourceGroupCard(group) }
                     }
+                }
                 }
                 Text("Offline SQLite · Source provenance preserved · Conflicts never auto-resolved", style = MaterialTheme.typography.labelSmall)
             }
