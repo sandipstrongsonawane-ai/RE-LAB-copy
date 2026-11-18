@@ -87,6 +87,33 @@ class ResearchBundleValidatorTest {
         assertTrue(result.errors.joinToString().contains("Invalid prediction-learning-ledger.csv"))
     }
 
+    @Test
+    fun rejectsTrailingGarbageAfterBundleIndexJson() {
+        val original = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-17T12:00:00Z")
+        )
+        val entries = unzip(original).toMutableMap()
+        entries["bundle-index.json"] = (String(entries.getValue("bundle-index.json")) + " trailing").toByteArray()
+        val result = ResearchBundleValidator.validate(zip(entries))
+        assertFalse(result.valid)
+        assertTrue(result.errors.any { it.contains("Malformed bundle index") })
+    }
+
+    @Test
+    fun rejectsUnknownFieldsInBundleIndexArtifactMetadata() {
+        val original = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-17T12:00:00Z")
+        )
+        val entries = unzip(original).toMutableMap()
+        val index = String(entries.getValue("bundle-index.json"))
+        entries["bundle-index.json"] = index.replace("\"sha256\"", "\"unexpected\"").toByteArray()
+        val result = ResearchBundleValidator.validate(zip(entries))
+        assertFalse(result.valid)
+        assertTrue(result.errors.any { it.contains("Malformed bundle index") })
+    }
+
     private fun unzip(bytes: ByteArray): Map<String, ByteArray> {
         val entries = linkedMapOf<String, ByteArray>()
         java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
