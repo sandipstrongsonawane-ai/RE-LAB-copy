@@ -37,7 +37,7 @@ class CandidateWalkForwardEvaluatorTest {
         assertEquals(9, report.totalTargetDates)
         assertEquals(4, report.evaluatedDates)
         assertEquals(5, report.insufficientHistoryDates)
-        assertTrue(report.candidates.all { it.selectedCount == report.evaluatedDates * 10 })
+        assertEquals(report.evaluatedDates * 10, report.candidates.sumOf { it.selectedCount })
     }
 
     @Test fun futureRowsCannotChangeEarlierEvaluationWindow() {
@@ -99,7 +99,7 @@ class CandidateWalkForwardEvaluatorTest {
         assertTrue(report.candidates.isNotEmpty())
         assertTrue(report.candidates.all { it.selectedCount > 0 })
         assertTrue(report.candidates.all { it.hitRate in 0.0..1.0 })
-        assertEquals(report.evaluatedDates, report.top1Hits + (report.evaluatedDates - report.top1Hits))
+        assertTrue(report.top1Hits in 0..report.evaluatedDates)
         assertTrue(report.warning.contains("Low sample"))
     }
 }
