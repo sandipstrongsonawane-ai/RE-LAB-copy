@@ -25,6 +25,21 @@ class HtmlChartImporterTest {
         assertEquals("277-65-249", report.observations.first().normalizedResult)
     }
 
+    @Test fun dailyRowsOutsideMarketCalendarAreNotPublished() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>Result</th></tr>
+              <tr><td>2026-11-22</td><td>277-65-249</td></tr>
+            </table>
+        """.trimIndent()
+        val report = HtmlChartImporter.import(html, url, Market.KALYAN, "main", retrieved)
+
+        assertEquals(1, report.observations.size)
+        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, report.observations.single().status)
+        assertNull(report.observations.single().normalizedResult)
+        assertEquals("277-65-249", report.observations.single().rawText)
+    }
+
     @Test fun invalidMathIsRetainedAsMalformedNotPublished() {
         val html = """<table><tr><td>2026-11-09</td><td>277-99-249</td></tr></table>"""
         val report = HtmlChartImporter.import(html, url, Market.SRIDEVI, "main", retrieved)
