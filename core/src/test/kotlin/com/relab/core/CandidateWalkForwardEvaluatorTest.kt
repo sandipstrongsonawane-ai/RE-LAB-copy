@@ -80,6 +80,25 @@ class CandidateWalkForwardEvaluatorTest {
         assertEquals(4, exploratory.evaluatedDates)
     }
 
+    @Test fun conflictingPublishedDateIsExcludedFromTargetsAndTraining() {
+        val rows = observations() + SourceObservation(
+            market = Market.SRIDEVI,
+            sessionId = "main",
+            date = LocalDate.of(2026, 11, 2),
+            sourceId = "publisher-c",
+            retrievedAt = Instant.parse("2026-11-17T10:00:00Z"),
+            rawText = "111-33-222",
+            normalizedResult = "111-33-222",
+            status = ObservationStatus.PUBLISHED
+        )
+        val report = CandidateWalkForwardEvaluator.evaluate(
+            rows, Market.SRIDEVI, "main", PannaSide.OPEN,
+            minimumHistory = 5, topN = 10
+        )
+        assertEquals(8, report.totalTargetDates)
+        assertEquals(3, report.evaluatedDates)
+    }
+
     @Test fun dateWindowIsAppliedToTargetDatesWithoutChangingEarlierTrainingRule() {
         val report = CandidateWalkForwardEvaluator.evaluate(
             observations(), Market.SRIDEVI, "main", PannaSide.OPEN,
