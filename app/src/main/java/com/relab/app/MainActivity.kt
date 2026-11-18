@@ -1073,10 +1073,10 @@ private fun CoverageReportCard(report: CoverageReport, onRangeApply: (LocalDate,
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Text("${report.market} · ${report.sessionId}", style = MaterialTheme.typography.titleMedium)
-            Text("Coverage date range (YYYY-MM-DD)", style = MaterialTheme.typography.titleSmall)
+            Text(uiText(uiLanguage, "Coverage date range (YYYY-MM-DD)", "कवरेज तारीख सीमा (YYYY-MM-DD)", "कव्हरेज तारीख श्रेणी (YYYY-MM-DD)"), style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = startText, onValueChange = { startText = it }, label = { Text("Start date") }, singleLine = true, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = endText, onValueChange = { endText = it }, label = { Text("End date") }, singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = startText, onValueChange = { startText = it }, label = { Text(uiText(uiLanguage, "Start date", "शुरुआती तारीख", "सुरुवातीची तारीख")) }, singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = endText, onValueChange = { endText = it }, label = { Text(uiText(uiLanguage, "End date", "अंतिम तारीख", "शेवटची तारीख")) }, singleLine = true, modifier = Modifier.weight(1f))
             }
             Button(onClick = {
                 try {
@@ -1088,14 +1088,14 @@ private fun CoverageReportCard(report: CoverageReport, onRangeApply: (LocalDate,
                 } catch (_: Exception) {
                     rangeError = "Enter valid dates in YYYY-MM-DD format; end date must not be earlier."
                 }
-            }) { Text("Apply date range") }
+            }) { Text(uiText(uiLanguage, "Apply date range", "तारीख सीमा लागू करें", "तारीख श्रेणी लागू करा")) }
             rangeError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             Text("Range: ${report.startDate} → ${report.endDate}")
             Text("Expected trading days: ${report.expectedTradingDays}")
             Text("Published: ${report.publishedDays} · Multi-source consensus: ${report.consensusDays} · Single-source unverified: ${report.singleSourceDays} · Conflicts: ${report.conflictDays}")
             Text("Pending: ${report.pendingDays} · Holidays: ${report.holidayDays}")
             Text("Source missing: ${report.sourceMissingDays} · Malformed only: ${report.malformedOnlyDays} · No observation: ${report.noObservationDays}")
-            Text("Latest coverage records", style = MaterialTheme.typography.titleSmall)
+            Text(uiText(uiLanguage, "Latest coverage records", "नवीनतम कवरेज रिकॉर्ड", "नवीनतम कव्हरेज नोंदी"), style = MaterialTheme.typography.titleSmall)
             report.days.takeLast(10).asReversed().forEach { day ->
                 val stateLabel = when (day.state) {
                     CoverageState.NO_OBSERVATION -> "NO OBSERVATION"
@@ -1142,7 +1142,7 @@ private fun DuplicateObservationAuditCard(groups: List<DuplicateObservationGroup
                 Text("$stateLabel · ${group.observations.size} snapshots", style = MaterialTheme.typography.bodySmall)
                 Text(snapshots, style = MaterialTheme.typography.bodySmall)
             }
-            Text("Audit only: no source rows are deleted, merged, or silently corrected.", style = MaterialTheme.typography.labelSmall)
+            Text(uiText(uiLanguage, "Audit only: no source rows are deleted, merged, or silently corrected.", "केवल ऑडिट: कोई source row delete, merge या चुपचाप correct नहीं होती।", "फक्त ऑडिट: कोणतीही source row delete, merge किंवा न सांगता correct केली जात नाही."), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -1152,14 +1152,14 @@ private fun DuplicateObservationAuditCard(groups: List<DuplicateObservationGroup
 private fun RepeatedPublishedResultAuditCard(groups: List<com.relab.core.RepeatedPublishedResultGroup>) {
     Card {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("Review flags: ${groups.size}")
+            Text(uiText(uiLanguage, "Review flags: ${groups.size}", "जांच संकेत: ${groups.size}", "तपासणी संकेत: ${groups.size}"))
             groups.take(20).forEach { group ->
                 val dates = group.observations.map { it.date }.distinct().joinToString()
                 Text("${group.market} · ${group.sessionId} · ${group.sourceId}", style = MaterialTheme.typography.titleSmall)
                 Text("${group.result} repeated on ${group.distinctDates} dates", style = MaterialTheme.typography.bodySmall)
-                Text("Dates: $dates", style = MaterialTheme.typography.bodySmall)
+                Text(uiText(uiLanguage, "Dates: $dates", "तारीखें: $dates", "तारखा: $dates"), style = MaterialTheme.typography.bodySmall)
             }
-            Text("Review signal only—not proof of stale data. Original observations remain preserved.", style = MaterialTheme.typography.labelSmall)
+            Text(uiText(uiLanguage, "Review signal only—not proof of stale data. Original observations remain preserved.", "यह केवल जांच का संकेत है, पुराने डेटा का प्रमाण नहीं। मूल रिकॉर्ड सुरक्षित रहते हैं।", "हा फक्त तपासणीचा संकेत आहे, जुना डेटा असल्याचा पुरावा नाही. मूळ नोंदी जतन राहतात."), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -1202,7 +1202,7 @@ private fun PatternResearchCard(analysis: MarketAnalysis) {
                 "Global ${"%.1f".format(analysis.closeGlobalModeBaseline.hitRate * 100)}% · Weekday ${"%.1f".format(analysis.closeWeekdayModeBaseline.hitRate * 100)}% · Previous ${"%.1f".format(analysis.closePreviousStateBaseline.hitRate * 100)}%  (n=${analysis.closeGlobalModeBaseline.evaluated})",
                 style = MaterialTheme.typography.bodySmall
             )
-            Text("Descriptive history only; walk-forward scores are baselines, not predictions.", style = MaterialTheme.typography.labelSmall)
+            Text(uiText(uiLanguage, "Descriptive history only; walk-forward scores are baselines, not predictions.", "यह केवल ऐतिहासिक विश्लेषण है; walk-forward स्कोर आधार हैं, भविष्यवाणी नहीं।", "हे फक्त ऐतिहासिक विश्लेषण आहे; walk-forward स्कोअर आधार आहेत, भविष्यवाणी नाहीत."), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
