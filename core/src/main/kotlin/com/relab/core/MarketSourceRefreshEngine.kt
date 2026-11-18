@@ -50,7 +50,7 @@ object MarketSourceRefreshEngine {
     ): MarketSourceRefreshReport {
         if (sources.isEmpty()) return MarketSourceRefreshReport(emptyList())
 
-        val groups = sources.withIndex().groupBy { it.value.url }
+        val groups = sources.withIndex().groupBy { it.value.url to it.value.enabled }
         val executor = Executors.newFixedThreadPool(minOf(MAX_PARALLEL_SOURCES, groups.size))
         val outcomesByIndex = arrayOfNulls<SourceRefreshOutcome>(sources.size)
         try {
