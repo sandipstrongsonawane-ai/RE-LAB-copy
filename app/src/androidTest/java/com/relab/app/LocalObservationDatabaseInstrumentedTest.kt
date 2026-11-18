@@ -1,6 +1,7 @@
 package com.relab.app
 
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.relab.core.Market
@@ -85,7 +86,7 @@ class LocalObservationDatabaseInstrumentedTest {
         )
         LocalObservationDatabase(context).use { db ->
             db.appendLockedPrediction(prediction)
-            assertThrows(IllegalStateException::class.java) { db.appendLockedPrediction(prediction) }
+            assertThrows(SQLiteConstraintException::class.java) { db.appendLockedPrediction(prediction) }
             val invalidAttempt = PredictionVerification(
                 prediction.id, PredictionGrade.GREY, null, null, null,
                 Instant.parse("2026-11-18T05:00:00Z"),
