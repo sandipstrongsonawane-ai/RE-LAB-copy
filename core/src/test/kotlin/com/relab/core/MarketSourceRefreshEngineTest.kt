@@ -33,16 +33,15 @@ class MarketSourceRefreshEngineTest {
     }
 
     @Test fun onePublisherFailureDoesNotStopOtherSources() {
-        var calls = 0
+        val failedSource = sridevi.first()
         val report = MarketSourceRefreshEngine.refresh(
             sridevi,
             fetch = {
-                calls++
-                if (calls == 1) error("temporary network failure")
+                if (it == failedSource) error("temporary network failure")
                 FetchedChartPage(html, it.url)
             }
         )
-        assertEquals(2, calls)
+        assertEquals(2, report.outcomes.size)
         assertEquals(1, report.failedSources)
         assertEquals(1, report.successfulSources)
         assertEquals("temporary network failure", report.outcomes.first().errorMessage)
