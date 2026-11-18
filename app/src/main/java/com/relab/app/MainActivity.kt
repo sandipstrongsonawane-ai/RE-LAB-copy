@@ -642,8 +642,8 @@ private fun RelabHome(
                                     val marketName = sourceMarketInput.trim().ifBlank {
                                         detectedMarket?.name ?: error("Market could not be auto-detected. Select the market explicitly.")
                                     }
-                                    val market = com.relab.core.Market.valueOf(marketName.uppercase())
-                                    val detectedSession = if (detectedMarket == com.relab.core.Market.SRIDEVI_NIGHT) "night" else "main"
+                                    val market = com.relab.core.Market.valueOf(marketName)
+                                    val detectedSession = if (detectedMarket?.name?.endsWith("_NIGHT") == true) "night" else "main"
                                     val session = sourceSessionInput.trim().ifBlank {
                                         if (detectedMarket != null) detectedSession else error("Session is ambiguous. Enter a session ID.")
                                     }
@@ -1373,23 +1373,29 @@ private fun importChartLink(
                 }
                 val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
                 val html = bytes.toString(Charsets.UTF_8)
-                val report = com.relab.core.HtmlChartImporter.import(
-                    html, connection.url.toString(), market, "main", java.time.Instant.now()
+                val sessionId = if (market.name.endsWith("_NIGHT")) "night" else "main"
+                val report = com.relab.core.ChartParserRegistry.parse(
+                    html, connection.url.toString(), market, sessionId, java.time.Instant.now()
                 )
+                val host = connection.url.host.lowercase().removePrefix("www.")
+                val publisherId = host.substringBefore('.')
+                val sourceRows = report.observations.map {
+                    it.copy(sourceId = publisherId, sourceUrl = cleanUrl)
+                }
                 // Persist on the worker thread: SQLite writes and dataset merging must
                 // never block the Compose/UI thread after a successful fetch.
-                val merged = if (report.observations.isNotEmpty()) save(report.observations) else emptyList()
+                val merged = if (sourceRows.isNotEmpty()) save(sourceRows) else emptyList()
                 mainHandler.post {
                     try {
-                        if (report.observations.isEmpty()) {
+                        if (sourceRows.isEmpty()) {
                             val detail = report.issues.firstOrNull()
                                 ?: "No dated chart-result rows found. This page may be JavaScript-rendered or use an unsupported layout."
-                            updateMessage("No records imported: $detail Skipped rows: ${report.skippedRows}.")
+                            updateMessage("No records imported by ${report.parserId}: $detail Skipped rows: ${report.skippedRows}.")
                         } else {
                             updateObservations(merged)
                             updateMessage(
-                                "${market.name}: fetched ${report.observations.size} rows; total saved observations ${merged.size}. " +
-                                    "Malformed rows ${report.issues.size}; skipped rows ${report.skippedRows}. Source: ${uri.host}."
+                                "${market.name}: fetched ${sourceRows.size} rows with ${report.parserId}; total saved observations ${merged.size}. " +
+                                    "Issues ${report.issues.size}; skipped rows ${report.skippedRows}. Publisher: $publisherId."
                             )
                         }
                     } catch (error: Exception) {

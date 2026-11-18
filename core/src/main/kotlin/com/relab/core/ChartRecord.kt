@@ -1,27 +1,72 @@
 package com.relab.core
 
-enum class Market(val activeDays: Set<java.time.DayOfWeek>) {
-    SRIDEVI(java.time.DayOfWeek.entries.toSet()),
-    SRIDEVI_NIGHT(java.time.DayOfWeek.entries.toSet()),
-    KALYAN(java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet()),
-    TIME_BAZAR(java.time.DayOfWeek.entries.toSet()),
-    MAIN_BAZAR(setOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY)),
-    // Additional named markets are explicit identities; do not collapse them into a generic bucket.
-    MILAN_DAY(java.time.DayOfWeek.entries.toSet()),
-    KALYAN_MORNING(java.time.DayOfWeek.entries.toSet()),
-    KALYAN_NIGHT(java.time.DayOfWeek.entries.toSet());
+class Market private constructor(
+    val name: String,
+    val activeDays: Set<java.time.DayOfWeek>
+) {
+    override fun equals(other: Any?): Boolean = other is Market && name == other.name
+    override fun hashCode(): Int = name.hashCode()
+    override fun toString(): String = name
 
     companion object {
-        /** Resolve only the five explicitly supported source chart paths. */
+        private val allDays = java.time.DayOfWeek.entries.toSet()
+
+        val SRIDEVI = Market("SRIDEVI", allDays)
+        val SRIDEVI_NIGHT = Market("SRIDEVI_NIGHT", allDays)
+        val KALYAN = Market("KALYAN", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
+        val TIME_BAZAR = Market("TIME_BAZAR", allDays)
+        val MAIN_BAZAR = Market(
+            "MAIN_BAZAR",
+            setOf(
+                java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY,
+                java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY,
+                java.time.DayOfWeek.FRIDAY
+            )
+        )
+        val MILAN_DAY = Market("MILAN_DAY", allDays)
+        val KALYAN_MORNING = Market("KALYAN_MORNING", allDays)
+        val KALYAN_NIGHT = Market("KALYAN_NIGHT", allDays)
+
+        /** Known built-in markets for legacy UI compatibility; valueOf also resolves new names. */
+        val entries: List<Market> = listOf(
+            SRIDEVI, SRIDEVI_NIGHT, KALYAN, TIME_BAZAR, MAIN_BAZAR,
+            MILAN_DAY, KALYAN_MORNING, KALYAN_NIGHT
+        )
+
+        fun values(): Array<Market> = entries.toTypedArray()
+
+        /**
+         * Resolve a stable market identity. Unknown names are retained as their
+         * own market instead of being mapped to a generic bucket or discarded.
+         * New identities default to all weekdays until a source-specific calendar
+         * is independently verified.
+         */
+        fun valueOf(value: String): Market {
+            val normalized = value.trim()
+                .uppercase(java.util.Locale.ROOT)
+                .replace(Regex("[^A-Z0-9]+"), "_")
+                .trim('_')
+            require(normalized.isNotBlank()) { "Market name is required." }
+            return entries.firstOrNull { it.name == normalized } ?: Market(normalized, allDays)
+        }
+
+        fun fromName(value: String): Market? = runCatching { valueOf(value) }.getOrNull()
+
+        /** Resolve legacy chart paths and MatkaFlash's slug-based panel-chart directory. */
         fun fromSourceUrl(value: String): Market? {
-            val path = runCatching { java.net.URI(value).path.lowercase(java.util.Locale.ROOT) }
-                .getOrNull() ?: return null
+            val uri = runCatching { java.net.URI(value) }.getOrNull() ?: return null
+            val path = uri.path?.lowercase(java.util.Locale.ROOT)?.trimEnd('/') ?: return null
             return when {
                 path.endsWith("/sridevi-night-satta-penal-chart.php") -> SRIDEVI_NIGHT
                 path.endsWith("/sridevi-satta-penal-chart.php") -> SRIDEVI
                 path.endsWith("/kalyan-penal-chart.php") -> KALYAN
                 path.endsWith("/time-bazar-panel-chart.php") -> TIME_BAZAR
                 path.endsWith("/main-bazar-panel-chart.php") -> MAIN_BAZAR
+                uri.host?.lowercase(java.util.Locale.ROOT)?.removePrefix("www.") == "matkaflash.com" &&
+                    path.endsWith("/panel-chart") -> {
+                    val slug = path.removeSuffix("/panel-chart").substringAfterLast('/')
+                    fromName(slug)
+                }
                 else -> null
             }
         }
