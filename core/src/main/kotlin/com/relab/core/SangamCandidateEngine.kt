@@ -191,8 +191,8 @@ object SangamWalkForwardEvaluator {
         val insufficient = targets.size - evaluated
         val warning = when {
             evaluated == 0 -> "No target dates had ${minimumHistory} strictly earlier eligible records. No hit rate is available."
+            allowSingleSourceExploration -> "Exploratory single-publisher backtest. Not independently verified; ${evaluated} target dates evaluated. Rates are descriptive and unstable; no future probability is implied."
             evaluated < 30 -> "Low sample: only ${evaluated} historical target dates were evaluated. Rates are descriptive and unstable."
-            allowSingleSourceExploration -> "Exploratory single-publisher backtest. Not independently verified; no future probability is implied."
             else -> "Consensus-only historical backtest. Past hit rates do not imply future probability or guarantee."
         }
         return SangamWalkForwardReport(
