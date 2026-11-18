@@ -51,16 +51,19 @@ object MarketSourceRefreshEngine {
                 require(uri.scheme == "https" && !uri.host.isNullOrBlank()) {
                     "Fetched source must resolve to an absolute HTTPS URL."
                 }
-                val imported = HtmlChartImporter.import(
+                val imported = ChartParserRegistry.parse(
                     html = page.html,
                     pageUrl = page.finalUrl,
                     market = source.market,
                     sessionId = source.sessionId,
                     retrievedAt = retrievedAt()
                 )
+                require(imported.observations.isNotEmpty()) {
+                    "UNSUPPORTED: no recognized dated chart rows were found by parser '${imported.parserId}'. Page may need a site-specific adapter."
+                }
                 SourceRefreshOutcome(
                     source = source,
-                    // Keep the configured publisher identity across multiple URLs/views.
+                    // Keep configured publisher identity and original registered URL.
                     observations = imported.observations.map { it.copy(sourceId = source.sourceId, sourceUrl = source.url) },
                     skippedRows = imported.skippedRows,
                     issues = imported.issues
