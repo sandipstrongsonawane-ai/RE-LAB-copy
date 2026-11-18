@@ -255,6 +255,25 @@ class LocalObservationDatabase(context: Context) :
         return loadPredictionLedger()
     }
 
+    /** Atomically restores source observations and the append-only learning ledger. */
+    fun appendResearchBundle(
+        sourceCsv: String,
+        incomingObservations: List<SourceObservation>,
+        incomingLedger: PredictionLearningLedger
+    ): Pair<List<SourceObservation>, PredictionLearningLedger> {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            // Nested transactions keep both operations under this outer commit boundary.
+            val mergedObservations = appendDataset(sourceCsv, incomingObservations)
+            val mergedLedger = appendPredictionLedger(incomingLedger)
+            db.setTransactionSuccessful()
+            return mergedObservations to mergedLedger
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun loadPredictionLedger(): PredictionLearningLedger {
         val db = readableDatabase
         val predictions = mutableListOf<LockedSidePrediction>()
