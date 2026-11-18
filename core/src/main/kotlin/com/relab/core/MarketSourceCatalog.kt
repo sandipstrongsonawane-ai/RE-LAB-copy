@@ -181,6 +181,27 @@ object MarketSourceCatalog {
             "https://sattamatkai.in/panel-chart-record/milan-day", "weekly-panel",
             note = "Verified Milan Day panel archive with dated weekday matrix; parser coverage is fixture-tested."
         ),
+        // User-supplied SattaMatkaJodi historical panel pages. All three URLs
+        // share one canonical publisher identity; keep them disabled until a real
+        // raw-HTML capture is fixture-tested against the three-cell weekly parser.
+        MarketSource(
+            Market.KALYAN, "main", "sattamatkajodi",
+            "https://sattamatkajodi.com/record/kalyan-penal-chart.php", "weekly-panel-three-cell",
+            enabled = false,
+            note = "User-supplied long-range Kalyan panel archive; raw HTML fixture and full date/session audit required before enabling."
+        ),
+        MarketSource(
+            Market.SRIDEVI, "main", "sattamatkajodi",
+            "https://sattamatkajodi.com/record/sridevi-satta-penal-chart.php", "weekly-panel-three-cell",
+            enabled = false,
+            note = "User-supplied Sridevi day panel archive; same publisher identity as its other chart pages; raw HTML fixture audit required."
+        ),
+        MarketSource(
+            Market.SRIDEVI_NIGHT, "night", "sattamatkajodi",
+            "https://sattamatkajodi.com/record/sridevi-night-satta-penal-chart.php", "weekly-panel-three-cell",
+            enabled = false,
+            note = "User-supplied Sridevi Night panel archive; kept separate from Sridevi day; raw HTML fixture audit required."
+        ),
         MarketSource(
             Market.KALYAN, "main", "kalyanchart",
             "https://kalyanchart.cyou/history/", "archive",

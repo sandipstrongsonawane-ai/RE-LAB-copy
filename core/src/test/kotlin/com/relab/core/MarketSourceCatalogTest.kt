@@ -143,4 +143,28 @@ class MarketSourceCatalogTest {
         assertEquals(source, MarketSourceCatalog.findByUrl(source.url))
         assertNull(MarketSourceCatalog.findByUrl(source.url + "?unreviewed=1"))
     }
+    @Test fun registersUserSuppliedSattaMatkaJodiPagesWithoutMixingSessionsOrPublishers() {
+        val supplied = MarketSourceCatalog.sources.filter { it.sourceId == "sattamatkajodi" }
+        assertEquals(3, supplied.size)
+        assertTrue(supplied.none { it.enabled })
+        assertTrue(supplied.all { it.url.startsWith("https://sattamatkajodi.com/") })
+        assertEquals(
+            setOf(Market.KALYAN to "main", Market.SRIDEVI to "main", Market.SRIDEVI_NIGHT to "night"),
+            supplied.map { it.market to it.sessionId }.toSet()
+        )
+        assertEquals(1, supplied.map { it.sourceId }.distinct().size)
+        assertEquals(
+            "https://sattamatkajodi.com/record/kalyan-penal-chart.php",
+            supplied.single { it.market == Market.KALYAN }.url
+        )
+        assertEquals(
+            "https://sattamatkajodi.com/record/sridevi-satta-penal-chart.php",
+            supplied.single { it.market == Market.SRIDEVI }.url
+        )
+        assertEquals(
+            "https://sattamatkajodi.com/record/sridevi-night-satta-penal-chart.php",
+            supplied.single { it.market == Market.SRIDEVI_NIGHT }.url
+        )
+    }
+
 }

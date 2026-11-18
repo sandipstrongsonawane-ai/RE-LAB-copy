@@ -65,3 +65,16 @@ Fresh indexed page excerpts expose additional source layouts:
 The offline extractor now recognizes ISO and month-name date ranges, infers the next year only when a yearless end-date crosses December, preserves dash/star-only cells as `MISSING_FROM_SOURCE`, and accepts seven-column Kalyan boards while retaining the explicit Sunday marker. Parser fixtures exercise these formats.
 
 These are parser-format discoveries from indexed text, **not raw HTML snapshot captures**. The three sources remain disabled pending byte-preserved snapshots, manifest SHA-256 audit, source-identity/mirroring checks, and full extraction/reconciliation.
+
+
+## User-supplied SattaMatkaJodi panel pages — 19 Nov 2026
+
+The following pages were opened and their published page descriptions identify long-range weekly panel matrices. They are registered as **disabled candidates** pending exact raw HTML capture, fixture-backed parser validation, and reconciliation. All pages share the same publisher domain and therefore the same canonical source ID, `sattamatkajodi`; they must never count as independent sources against one another.
+
+| Source ID | Market/session | URL | Published archive description | Gate before enabling |
+|---|---|---|---|---|
+| `sattamatkajodi` | Kalyan / main | https://sattamatkajodi.com/record/kalyan-penal-chart.php | Page states records start week of 31 Dec 2012; Monday–Saturday panel columns. | Capture raw HTML; test weekly 3-cell layout, 6-day calendar, star markers and all date ranges. |
+| `sattamatkajodi` | Sridevi / main (day) | https://sattamatkajodi.com/record/sridevi-satta-penal-chart.php | Page states records start week of 26 Feb 2018; Monday–Sunday panel columns. | Capture raw HTML; test 7-day layout and missing markers; keep separate from night. |
+| `sattamatkajodi` | Sridevi Night / night | https://sattamatkajodi.com/record/sridevi-night-satta-penal-chart.php | Page states records start week of 28 Jan 2019; Monday–Sunday panel columns. | Capture raw HTML; test 7-day layout and audit malformed historical date labels before enabling. |
+
+Page descriptions and visible indexed content are discovery evidence only—not raw HTML snapshots, not proof of complete coverage, and not publisher independence. Do not import rows from search/browser-rendered text as if they were raw captures.
