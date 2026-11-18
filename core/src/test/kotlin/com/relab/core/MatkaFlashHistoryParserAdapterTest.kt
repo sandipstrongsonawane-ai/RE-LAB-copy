@@ -39,6 +39,26 @@ class MatkaFlashHistoryParserAdapterTest {
         assertNull(pending.normalizedResult)
     }
 
+
+    @Test fun extractsKalyanHistoryAndRetainsExplicitHolidayRows() {
+        val html = requireNotNull(javaClass.classLoader?.getResourceAsStream("fixtures/matkaflash-kalyan-history.html")) {
+            "MatkaFlash Kalyan fixture resource is missing"
+        }.bufferedReader().use { it.readText() }
+        val url = "https://matkaflash.com/kalyan"
+        val parsed = ChartParserRegistry.parse(html, url, Market.KALYAN, "main", retrievedAt)
+
+        assertEquals("matkaflash-history-v1", parsed.parserId)
+        assertEquals(4, parsed.observations.size)
+        assertEquals(
+            "390-24-257",
+            parsed.observations.single { it.date == LocalDate.parse("2026-11-12") }.normalizedResult
+        )
+        val holiday = parsed.observations.single { it.date == LocalDate.parse("2026-11-13") }
+        assertEquals(ObservationStatus.HOLIDAY_CLOSED, holiday.status)
+        assertNull(holiday.normalizedResult)
+        assertTrue(parsed.observations.all { it.sourceUrl == url })
+    }
+
     @Test fun adapterDoesNotClaimOtherPublishersOrHeaderLayouts() {
         val html = fixture()
         assertFalse(MatkaFlashHistoryParserAdapter.supports(html, "https://example.com/sridevi"))
