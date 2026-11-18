@@ -65,6 +65,28 @@ class MarketSourceRefreshEngineTest {
         assertTrue(report.outcomes.single().errorMessage.orEmpty().contains("disabled"))
     }
 
+
+    @Test fun unsupportedLayoutIsReportedAsFailureAndDoesNotCreateChartRows() {
+        val report = MarketSourceRefreshEngine.refresh(
+            sridevi.take(1),
+            fetch = { FetchedChartPage("<html><body><p>Welcome, no chart table here</p></body></html>", it.url) }
+        )
+        assertEquals(1, report.failedSources)
+        assertEquals(0, report.successfulSources)
+        assertTrue(report.observations.isEmpty())
+        assertTrue(report.outcomes.single().errorMessage.orEmpty().contains("UNSUPPORTED"))
+    }
+
+    @Test fun unrelatedTableWithNoRecognizedDatedResultsIsNotReportedAsSuccessful() {
+        val report = MarketSourceRefreshEngine.refresh(
+            sridevi.take(1),
+            fetch = { FetchedChartPage("<table><tr><th>News</th></tr><tr><td>Welcome</td></tr></table>", it.url) }
+        )
+        assertEquals(1, report.failedSources)
+        assertTrue(report.observations.isEmpty())
+        assertTrue(report.outcomes.single().errorMessage.orEmpty().contains("no recognized dated chart rows"))
+    }
+
     @Test fun rejectsInsecureRedirectTargets() {
         val report = MarketSourceRefreshEngine.refresh(
             sridevi.take(1),
