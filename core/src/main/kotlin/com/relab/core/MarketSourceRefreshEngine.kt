@@ -1,6 +1,8 @@
 package com.relab.core
 
 import java.time.Instant
+import java.net.URI
+import java.util.Locale
 
 data class FetchedChartPage(
     val html: String,
@@ -47,9 +49,14 @@ object MarketSourceRefreshEngine {
             try {
                 require(source.enabled) { "Source is disabled pending identity verification." }
                 val page = fetch(source)
-                val uri = java.net.URI(page.finalUrl)
-                require(uri.scheme == "https" && !uri.host.isNullOrBlank()) {
-                    "Fetched source must resolve to an absolute HTTPS URL."
+                val uri = URI(page.finalUrl)
+                require(uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() && uri.userInfo == null) {
+                    "Fetched source must resolve to an absolute HTTPS URL without embedded credentials."
+                }
+                val registeredHost = canonicalHost(URI(source.url).host)
+                val finalHost = canonicalHost(uri.host)
+                require(finalHost == registeredHost) {
+                    "Redirect changed publisher host from '$registeredHost' to '$finalHost'; verify and register the destination explicitly."
                 }
                 val imported = ChartParserRegistry.parse(
                     html = page.html,
@@ -80,4 +87,8 @@ object MarketSourceRefreshEngine {
         }
         return MarketSourceRefreshReport(outcomes)
     }
+
+    private fun canonicalHost(host: String?): String =
+        host?.lowercase(Locale.ROOT)?.removePrefix("www.")
+            ?: throw IllegalArgumentException("Source URL host is missing.")
 }
