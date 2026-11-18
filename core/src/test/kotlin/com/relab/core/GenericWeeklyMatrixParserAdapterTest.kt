@@ -168,6 +168,29 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertTrue(sunday.rawText.contains("390-24-257"))
     }
 
+    @Test fun parsesVerifiedLivesattamatkaNetPanelRecordMatrix() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+              <tr><td>16/11 to 22/11 2026</td><td>5 7 7 99 6 6 7</td><td>1 1 5 73 2 2 9</td><td>4 7 9 07 5 6 6</td><td></td><td></td><td></td><td></td></tr>
+            </table>
+        """.trimIndent()
+        val url = "https://livesattamatka.net/panna-chart/sridevi"
+        val parsed = ChartParserRegistry.parse(html, url, Market.SRIDEVI, "main", retrievedAt)
+        assertEquals("generic-weekly-matrix-v1", parsed.parserId)
+        assertEquals(7, parsed.observations.size)
+        assertEquals("577-99-667", parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-16")
+        }.normalizedResult)
+        assertEquals("115-73-229", parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-17")
+        }.normalizedResult)
+        assertEquals("livesattamatka.net", parsed.observations.first().sourceId)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-19")
+        }.status)
+    }
+
     @Test fun preservesRepeatedDateRowsSoConflictingPublisherValuesAreNotSilentlyDiscarded() {
         val html = """
             <table>
