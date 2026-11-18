@@ -39,8 +39,9 @@ class PredictionLedgerCsvCodecTest {
     @Test
     fun rejectsDuplicateVerificationAttempt() {
         val csv = PredictionLedgerCsvCodec.export(fixture())
-        val verificationRow = csv.lineSequence().last { it.startsWith("\"VERIFICATION\"") }
-        val duplicated = csv + verificationRow + "\n"
+        val verificationStart = csv.indexOf("\"VERIFICATION\"")
+        val verificationRecord = csv.substring(verificationStart).trimEnd()
+        val duplicated = csv + verificationRecord + "\n"
         val error = runCatching { PredictionLedgerCsvCodec.import(duplicated) }.exceptionOrNull()
         assertTrue(error?.message.orEmpty().contains("duplicate verification attempts"))
     }
@@ -57,8 +58,10 @@ class PredictionLedgerCsvCodecTest {
     @Test
     fun rejectsDuplicateLockedPredictionIdentity() {
         val csv = PredictionLedgerCsvCodec.export(fixture())
-        val predictionRow = csv.lineSequence().first { it.startsWith("\"PREDICTION\"") }
-        val duplicated = csv + predictionRow + "\n"
+        val predictionStart = csv.indexOf("\"PREDICTION\"")
+        val verificationStart = csv.indexOf("\"VERIFICATION\"")
+        val predictionRecord = csv.substring(predictionStart, verificationStart).trimEnd()
+        val duplicated = csv + predictionRecord + "\n"
         val error = runCatching { PredictionLedgerCsvCodec.import(duplicated) }.exceptionOrNull()
         assertTrue(error?.message.orEmpty().contains("duplicate locked prediction IDs"))
     }
