@@ -103,15 +103,30 @@ object MatkaFlashHistoryParserAdapter : ChartParserAdapter {
 
         table.select("tr").drop(1).forEachIndexed { index, row ->
             val cells = row.select("th,td").map { it.text().trim() }
-            if (cells.size <= maxOf(dateIndex, openIndex, jodiIndex, closeIndex, statusIndex)) {
+            if (cells.size <= dateIndex) {
                 skipped++
-                issues += "History row ${index + 2}: expected six result columns"
+                issues += "History row ${index + 2}: date column is missing"
                 return@forEachIndexed
             }
             val date = runCatching { java.time.LocalDate.parse(cells[dateIndex], dateFormatter) }.getOrNull()
             if (date == null) {
                 skipped++
                 issues += "History row ${index + 2}: unrecognized date '${cells[dateIndex]}'"
+                return@forEachIndexed
+            }
+            val raw = cells.joinToString(" | ")
+            if (cells.any { it.equals("holiday", ignoreCase = true) }) {
+                observations += SourceObservation(
+                    market = market, sessionId = sessionId, date = date,
+                    sourceId = "matkaflash.com", sourceUrl = pageUrl,
+                    retrievedAt = retrievedAt, rawText = raw,
+                    normalizedResult = null, status = ObservationStatus.HOLIDAY_CLOSED
+                )
+                return@forEachIndexed
+            }
+            if (cells.size <= maxOf(dateIndex, openIndex, jodiIndex, closeIndex, statusIndex)) {
+                skipped++
+                issues += "History row ${index + 2}: expected six result columns"
                 return@forEachIndexed
             }
             val open = cells[openIndex]
