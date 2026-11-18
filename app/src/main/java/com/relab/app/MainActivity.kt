@@ -117,12 +117,23 @@ private fun encodeMarketSources(sources: List<MarketSource>): String {
     return array.toString()
 }
 
+private fun loadSourceStatuses(preferences: android.content.SharedPreferences): Map<String, String> {
+    val raw = preferences.getString("market_source_status_v1", null) ?: return emptyMap()
+    return runCatching {
+        val json = JSONObject(raw)
+        json.keys().asSequence().associateWith { json.getString(it) }
+    }.getOrDefault(emptyMap())
+}
+
+private fun encodeSourceStatuses(statuses: Map<String, String>): String =
+    JSONObject().apply { statuses.forEach { (url, status) -> put(url, status) } }.toString()
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val database = LocalObservationDatabase(this)
         val preferences = getSharedPreferences("relab_local", MODE_PRIVATE)
         val initialMarketSources = loadMarketSources(preferences)
+        val initialSourceStatuses = loadSourceStatuses(preferences)
 
         // One-time migration from the first CSV-only build. Keep the old preference
         // until the database transaction succeeds so a failed migration is recoverable.
@@ -150,6 +161,8 @@ class MainActivity : ComponentActivity() {
             RelabHome(
                 initialMarketSources = initialMarketSources,
                 onSaveMarketSources = { sources -> preferences.edit().putString(KEY_MARKET_SOURCES, encodeMarketSources(sources)).apply() },
+                initialSourceStatuses = initialSourceStatuses,
+                onSaveSourceStatuses = { statuses -> preferences.edit().putString(KEY_SOURCE_STATUSES, encodeSourceStatuses(statuses)).apply() },
                 initialCoverageRanges = initialCoverageRanges,
                 onSaveCoverageRange = { key, start, end ->
                     preferences.edit().putString(COVERAGE_RANGE_PREFIX + key, "$start|$end").apply()
@@ -179,6 +192,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val COVERAGE_RANGE_PREFIX = "coverage_range:"
         private const val KEY_MARKET_SOURCES = "market_sources_v1"
+        private const val KEY_SOURCE_STATUSES = "market_source_status_v1"
     }
 }
 
@@ -186,6 +200,8 @@ class MainActivity : ComponentActivity() {
 private fun RelabHome(
     initialMarketSources: List<MarketSource>,
     onSaveMarketSources: (List<MarketSource>) -> Unit,
+    initialSourceStatuses: Map<String, String>,
+    onSaveSourceStatuses: (Map<String, String>) -> Unit,
     initialCsv: String?,
     initialObservations: List<com.relab.core.SourceObservation>,
     initialCoverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
@@ -200,6 +216,7 @@ private fun RelabHome(
     var importMessage by remember { mutableStateOf<String?>(null) }
     var chartUrl by remember { mutableStateOf("") }
     var marketSources by remember { mutableStateOf(initialMarketSources) }
+    var sourceStatuses by remember { mutableStateOf(initialSourceStatuses) }
     var sourceUrlInput by remember { mutableStateOf("") }
     var sourcePublisherInput by remember { mutableStateOf("") }
     var sourceMarketInput by remember { mutableStateOf("") }
@@ -537,7 +554,7 @@ private fun RelabHome(
                             Button(
                                 enabled = !linkBusy && marketSources.any { it.enabled },
                                 onClick = {
-                                    refreshRegisteredSources(marketSources, onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it })
+                                    refreshRegisteredSources(marketSources, onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
                                 },
                                 modifier = Modifier.weight(1f)
                             ) { Text(if (linkBusy) "Refreshing…" else "Refresh all sources") }
@@ -547,6 +564,7 @@ private fun RelabHome(
                             Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text("${source.sourceId} · ${source.market.name}/${source.sessionId}", style = MaterialTheme.typography.titleSmall)
                                 Text(source.url, style = MaterialTheme.typography.bodySmall)
+                                sourceStatuses[source.url]?.let { Text("Last refresh: $it", style = MaterialTheme.typography.bodySmall) }
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     OutlinedButton(onClick = {
                                         editingSourceUrl = source.url
@@ -564,7 +582,7 @@ private fun RelabHome(
                                         onSaveMarketSources(marketSources)
                                     }) { Text("Remove") }
                                     OutlinedButton(enabled = source.enabled && !linkBusy, onClick = {
-                                        refreshRegisteredSources(listOf(source), onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it })
+                                        refreshRegisteredSources(listOf(source), onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
                                     }) { Text("Refresh") }
                                 }
                             }
@@ -1114,7 +1132,8 @@ private fun importChartLink(
     save: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
     updateObservations: (List<com.relab.core.SourceObservation>) -> Unit,
     updateMessage: (String) -> Unit,
-    updateBusy: (Boolean) -> Unit
+    updateBusy: (Boolean) -> Unit,
+    updateStatuses: (Map<String, String>) -> Unit
 ) {
     val cleanUrl = rawUrl.trim()
     val mainHandler = Handler(Looper.getMainLooper())
@@ -1221,6 +1240,15 @@ private fun refreshRegisteredSources(
             try {
                 val extracted = report.observations
                 if (extracted.isNotEmpty()) updateObservations(save(extracted))
+                val checkedAt = java.time.Instant.now().toString()
+                updateStatuses(report.outcomes.associate { outcome ->
+                    val state = if (outcome.errorMessage == null) {
+                        "OK · ${outcome.observations.size} rows · $checkedAt"
+                    } else {
+                        "FAILED · ${outcome.errorMessage} · $checkedAt"
+                    }
+                    outcome.source.url to state
+                })
                 val detail = report.outcomes.joinToString(" | ") { outcome ->
                     when {
                         outcome.errorMessage != null -> "${outcome.source.sourceId}: UNSUPPORTED/FAILED (${outcome.errorMessage})"
