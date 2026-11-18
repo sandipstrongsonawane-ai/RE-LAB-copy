@@ -1292,6 +1292,10 @@ private fun HomeReverseEngineeringCard(
     fun topCounts(items: List<com.relab.core.PatternCount>, limit: Int = 3): String =
         items.take(limit).joinToString(" · ") { "${it.pattern} ×${it.count} (${"%.1f".format(it.percentage)}%)" }
             .ifBlank { "Abhi enough evidence nahi" }
+    fun topSequenceTransitions(values: Map<String, Int>): String =
+        values.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .take(3).joinToString(" · ") { "${it.key} ×${it.value}" }
+            .ifBlank { "Not enough consecutive panna rows" }
     fun topPositions(items: List<Map<Int, Int>>): String =
         items.mapIndexed { index, values ->
             val top = values.entries.sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key })
@@ -1336,6 +1340,9 @@ private fun HomeReverseEngineeringCard(
             TransitionMatrix("Open family transition matrix · previous row → next row", analysis.openFamilyDigitTransitions)
             TransitionMatrix("Close family transition matrix · previous row → next row", analysis.closeFamilyDigitTransitions)
             Text("Counts combine transitions at all 3 digit positions between consecutive valid dates. They are counts, not probabilities.", style = MaterialTheme.typography.labelSmall)
+            Text("Panna-family sequence transitions · Open: ${topSequenceTransitions(analysis.openPannaFamilyTransitions)}", style = MaterialTheme.typography.bodySmall)
+            Text("Panna-family sequence transitions · Close: ${topSequenceTransitions(analysis.closePannaFamilyTransitions)}", style = MaterialTheme.typography.bodySmall)
+            Text("Each item is previous 3-position family sequence → next sequence; counts only, observed transitions only.", style = MaterialTheme.typography.labelSmall)
             Text("2) Weekday pattern · ${topWeekday(analysis.openWeekdayCounts)}", style = MaterialTheme.typography.bodySmall)
             Text("3) Ank frequency · Open: ${topCounts(analysis.openAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
