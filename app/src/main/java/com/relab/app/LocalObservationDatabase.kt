@@ -201,10 +201,16 @@ class LocalObservationDatabase(context: Context) :
                 arrayOf(verification.predictionId), null, null, null
             ).use { it.moveToFirst() }
             require(predictionExists) { "Verification references an unknown locked prediction." }
-            val latestAttempt = db.rawQuery(
-                "SELECT COALESCE(MAX(attempt), 0) FROM $TABLE_VERIFICATIONS WHERE prediction_id = ?",
+            val latest = db.rawQuery(
+                "SELECT attempt, grade FROM $TABLE_VERIFICATIONS WHERE prediction_id = ? ORDER BY attempt DESC LIMIT 1",
                 arrayOf(verification.predictionId)
-            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) to cursor.getString(1) else null
+            }
+            require(latest == null || latest.second == PredictionGrade.GREY.name) {
+                "Prediction already has a terminal GREEN/RED grade; it cannot be reverified."
+            }
+            val latestAttempt = latest?.first ?: 0
             require(verification.attempt == latestAttempt + 1) {
                 "Verification attempt is out of sequence; reload the ledger and retry."
             }
