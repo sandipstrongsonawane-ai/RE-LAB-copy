@@ -833,6 +833,19 @@ private fun RelabHome(
                 }
                 if (analyticsBusy) Text(uiText(uiLanguage, "Updating historical analytics in background…", "पुराने डेटा का विश्लेषण चल रहा है…", "ऐतिहासिक डेटाचे विश्लेषण सुरू आहे…"), style = MaterialTheme.typography.bodySmall)
                 }
+                if (activeSection == "home") {
+                    Text("Market-wise next research · historical pattern shares", style = MaterialTheme.typography.titleLarge)
+                    Text("Percentages are observed historical frequencies—not fixed odds or guaranteed predictions. Source gaps and stale data reduce confidence.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val marketInsightKeys = (researchRecords.map { it.market to it.sessionId } + marketSources.filter { it.enabled }.map { it.market to it.sessionId }).distinct().sortedWith(compareBy({ it.first.name }, { it.second }))
+                    if (marketInsightKeys.isEmpty()) Text("No market history yet. Refresh registered internet sources to populate this dashboard.")
+                    else marketInsightKeys.forEach { (market, sessionId) ->
+                        val rows = researchRecords.filter { it.market == market && it.sessionId == sessionId }
+                        val candidate = candidateSets.firstOrNull { it.first.market == market && it.first.sessionId == sessionId }
+                        MarketNextInsightCard(market, sessionId, rows, candidate?.first, candidate?.second, candidate?.third.orEmpty(),
+                            observations.filter { it.market == market && it.sessionId == sessionId }.maxOfOrNull { it.retrievedAt },
+                            rows.maxOfOrNull { it.date })
+                    }
+                }
                 if (activeSection == "research") {
                 Text(uiText(uiLanguage, "Pattern research · exploratory + verified", "पैटर्न रिसर्च · खोज + सत्यापन", "पॅटर्न संशोधन · शोध + पडताळणी"), style = MaterialTheme.typography.titleLarge)
                 Text(
@@ -1085,6 +1098,74 @@ private fun PublisherCoverageReportCard(
                 "Coverage is tracked per exact registered URL. NO ROW means no matching record was imported; it is not automatically a holiday or proof the publisher omitted the result.",
                 style = MaterialTheme.typography.labelSmall
             )
+        }
+    }
+}
+
+@Composable
+private fun MarketNextInsightCard(
+    market: com.relab.core.Market, sessionId: String, records: List<com.relab.core.ChartRecord>,
+    open: com.relab.core.CandidateRanking?, close: com.relab.core.CandidateRanking?,
+    jodi: List<com.relab.core.JodiCandidate>, latestRetrievedAt: java.time.Instant?, latestResultDate: LocalDate?
+) {
+    val features = records.mapNotNull { record ->
+        (com.relab.core.ChartMath.validate(record) as? com.relab.core.ValidationResult.Valid)?.features
+    }
+    fun top(values: List<String>, denominator: Int): String {
+        if (values.isEmpty() || denominator == 0) return "Insufficient history"
+        val (pattern, count) = values.groupingBy { it }.eachCount().entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).first()
+        return "$pattern · \${"%.1f".format(count * 100.0 / denominator)}% (n=$count/$denominator)"
+    }
+    fun nextActiveDate(): LocalDate {
+        var date = LocalDate.now().plusDays(1)
+        repeat(14) { if (date.dayOfWeek in market.activeDays) return date else date = date.plusDays(1) }
+        return LocalDate.now().plusDays(1)
+    }
+    val openDigit = top(features.map { it.openAnk.toString() }, features.size)
+    val jodiPattern = top(features.map { "\${it.openAnk}\${it.closeAnk}" }, features.size)
+    val halfOpen = top(features.map { "\${it.openPanna}-\${it.closeAnk}" }, features.size)
+    val halfClose = top(features.map { "\${it.openAnk}-\${it.closePanna}" }, features.size)
+    val fullSangam = top(features.map { "\${it.openPanna}-\${it.closePanna}" }, features.size)
+    val pannaTypes = features.flatMap { listOf(it.openPanna to it.openType, it.closePanna to it.closeType) }
+    val doublePannas = pannaTypes.filter { (_, type) -> type.name.contains("DOUBLE") || type.name == "DP" }.map { it.first }
+    val triplePannas = pannaTypes.filter { (_, type) -> type.name.contains("TRIPLE") || type.name == "TP" }.map { it.first }
+    val pannaDenominator = features.size * 2
+    val ageHours = latestRetrievedAt?.let { java.time.Duration.between(it, java.time.Instant.now()).toHours().coerceAtLeast(0) }
+    val freshnessLabel = when {
+        latestRetrievedAt == null -> "NO SOURCE FETCH"
+        ageHours!! >= 72 -> "STALE · \${ageHours}h"
+        ageHours >= 24 -> "AGING · \${ageHours}h"
+        else -> "RECENT · \${ageHours}h"
+    }
+    val freshnessColor = when {
+        latestRetrievedAt == null || ageHours!! >= 72 -> MaterialTheme.colorScheme.error
+        ageHours >= 24 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("$market · $sessionId", style = MaterialTheme.typography.titleMedium)
+                Text(freshnessLabel, color = freshnessColor, style = MaterialTheme.typography.labelSmall)
+            }
+            Text("Next active date: \${nextActiveDate()} · History: \${features.size} valid rows")
+            Text("Latest result: \${latestResultDate ?: "—"} · Last source fetch: \${latestRetrievedAt ?: "Never"}", style = MaterialTheme.typography.bodySmall)
+            androidx.compose.material3.HorizontalDivider()
+            Text("OPEN DIGIT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(openDigit)
+            Text("JODI · historical open/close ank pair", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(jodiPattern)
+            Text("HALF SANGAM · Open panna + close ank", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(halfOpen)
+            Text("HALF SANGAM · Open ank + close panna", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(halfClose)
+            Text("DP · observed double-panna share", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(top(doublePannas, pannaDenominator))
+            Text("TRIPLE PANNA · observed triple-panna share", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(top(triplePannas, pannaDenominator))
+            Text("FULL SANGAM · exact open/close panna pair", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(fullSangam)
+            if (open != null && close != null && !open.abstained && !close.abstained) {
+                Text("Next research candidates · relative evidence index (not probability)", style = MaterialTheme.typography.titleSmall)
+                Text("Open: \${open.candidates.take(3).joinToString { "\${it.panna} (\${"%.1f".format(it.score)})" }}")
+                Text("Close: \${close.candidates.take(3).joinToString { "\${it.panna} (\${"%.1f".format(it.score)})" }}")
+                Text("Jodi rank: \${jodi.take(3).joinToString { "\${it.jodi} (\${"%.1f".format(it.score)})" }}")
+            } else Text(open?.note ?: "Candidate ranking unavailable until source history arrives.", style = MaterialTheme.typography.bodySmall)
+            Text("Historical share = matching rows ÷ eligible rows. Descriptive evidence only, not a calibrated future chance. See Research and Audit for backtests, missing dates, publisher coverage and conflicts.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
