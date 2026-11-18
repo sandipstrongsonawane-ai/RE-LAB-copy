@@ -173,7 +173,9 @@ class MainActivity : ComponentActivity() {
                 initialPredictionLedger = database.loadPredictionLedger(),
                 onSaveLockedPrediction = { database.appendLockedPrediction(it) },
                 onSavePredictionVerification = { database.appendPredictionVerification(it) },
-                onRestorePredictionLedger = { database.appendPredictionLedger(it) },
+                onRestoreResearchBundle = { csv, importedObservations, ledger ->
+                    database.appendResearchBundle(csv, importedObservations, ledger)
+                },
                 onSaveCsv = { csv, observations ->
                     require(observations.isNotEmpty()) { "No valid source observations to save" }
                     database.appendDataset(csv, observations)
@@ -212,7 +214,7 @@ private fun RelabHome(
     initialPredictionLedger: com.relab.core.PredictionLearningLedger,
     onSaveLockedPrediction: (com.relab.core.LockedSidePrediction) -> Unit,
     onSavePredictionVerification: (com.relab.core.PredictionVerification) -> Unit,
-    onRestorePredictionLedger: (com.relab.core.PredictionLearningLedger) -> com.relab.core.PredictionLearningLedger,
+    onRestoreResearchBundle: (String, List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger) -> Pair<List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger>,
     initialCoverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
     onSaveCoverageRange: (String, LocalDate, LocalDate) -> Unit,
     onSaveCsv: (String, List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
@@ -455,13 +457,14 @@ private fun RelabHome(
                         importMessage = "Bundle verified, but it contains no valid source observations or locked predictions."
                     } else {
                         val previousCount = observations.size
-                        val merged = if (parsed.observations.isEmpty()) observations else onSaveCsv(sourceCsv, parsed.observations)
+                        val (merged, restoredLedger) = onRestoreResearchBundle(
+                            sourceCsv, parsed.observations, importedLedger
+                        )
                         val addedCount = (merged.size - previousCount).coerceAtLeast(0)
-                        val restoredLedger = onRestorePredictionLedger(importedLedger)
                         observations = merged
                         predictionLedger = restoredLedger
                         rawCsv = sourceCsv
-                        importMessage = "Verified bundle restored: ${validation.verifiedFiles} artifact checksums passed; added ${addedCount} observations and restored ${importedLedger.lockedPredictions.size} locked predictions / ${importedLedger.verifications.size} verification attempts. Existing history was retained. Row issues: ${parsed.issues.size}."
+                        importMessage = "Verified bundle restored atomically: ${validation.verifiedFiles} artifact checksums passed; added ${addedCount} observations and restored ${importedLedger.lockedPredictions.size} locked predictions / ${importedLedger.verifications.size} verification attempts. Existing history was retained. Row issues: ${parsed.issues.size}."
                     }
                 }
             } catch (error: Exception) {
