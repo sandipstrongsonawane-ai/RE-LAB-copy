@@ -62,7 +62,6 @@ data class PredictionLearningLedger(
         require(verifications.map { it.predictionId to it.attempt }.distinct().size == verifications.size) {
             "Verification attempt numbers must be unique per prediction."
         }
-        require(verifications.groupBy { it.predictionId }.keys.all { id -> lockedPredictions.any { it.id == id } }) {
         require(verifications.all { result -> lockedPredictions.any { it.id == result.predictionId } }) {
             "Verification must refer to a previously locked prediction."
         }
