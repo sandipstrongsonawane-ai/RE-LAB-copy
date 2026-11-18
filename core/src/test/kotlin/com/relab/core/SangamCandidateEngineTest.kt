@@ -97,9 +97,9 @@ class SangamCandidateEngineTest {
     @Test fun sangamWalkForwardDeduplicatesRepeatedSourceRowsAndRejectsInvalidWindows() {
         val rows = datedObservations()
         val duplicated = rows + rows.first()
-        val report = SangamWalkForwardEvaluator.evaluate(duplicated, Market.SRIDEVI, "main")
+        val report = SangamWalkForwardEvaluator.evaluate(duplicated, Market.SRIDEVI, "main", minimumHistory = 2)
         assertEquals("Repeated publisher rows must not create extra target dates", 5, report.totalTargetDates)
-        assertEquals(1, report.evaluatedDates)
+        assertEquals(3, report.evaluatedDates)
         try {
             SangamWalkForwardEvaluator.evaluate(
                 rows, Market.SRIDEVI, "main",
