@@ -58,6 +58,15 @@ class SourceCsvImporterTest {
         }
     }
 
+    @Test fun acceptsUtf8BomBeforeFirstHeader() {
+        val csv = "\uFEFF" + header + "\n" +
+            "SRIDEVI,main,2026-11-09,archive-a,2026-11-09T08:00:00Z,raw,PENDING,row-1,,,"
+        val report = SourceCsvImporter.import(csv)
+        assertTrue(report.issues.toString(), report.issues.isEmpty())
+        assertEquals(1, report.observations.size)
+        assertEquals("raw", report.observations.single().rawText)
+    }
+
     @Test fun rejectsUnknownOrMissingHeaders() {
         val report = SourceCsvImporter.import("market,date")
         assertTrue(report.observations.isEmpty())
