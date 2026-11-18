@@ -33,6 +33,28 @@ class WeeklyChartHtmlExtractorTest(unittest.TestCase):
         self.assertEqual("", rows[5]["result"])
         self.assertEqual("2026-01-04", rows[6]["date"])
 
+    def test_extracts_single_cell_per_day_weekly_layout_used_by_hpofficial(self):
+        html = """
+        <table><tr><th>DATE</th><th>MON</th><th>TUE</th><th>WED</th>
+        <th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th></tr>
+        <tr><td>29/12/25TO04/01/26</td>
+        <td>4 6 0 09 2 8 9</td><td>4 5 0 92 2 4 6</td>
+        <td>1 8 9 83 6 8 9</td><td>1 5 5 14 6 8 0</td>
+        <td>2 9 9 00 4 7 9</td><td>2 5 0 78 1 7 0</td><td>********</td>
+        </tr></table>
+        """
+        rows, issues = extract_rows(
+            html, market="SRIDEVI", session_id="main", source_id="hpofficial",
+            retrieved_at="2026-11-18T12:00:00+05:30",
+            source_url="https://hpofficial.in/sridevi-panel-chart/"
+        )
+        self.assertEqual([], issues)
+        self.assertEqual(7, len(rows))
+        self.assertEqual("460-09-289", rows[0]["result"])
+        self.assertEqual("299-00-479", rows[4]["result"])
+        self.assertEqual("MISSING_FROM_SOURCE", rows[6]["status"])
+        self.assertEqual("********", rows[6]["raw_text"])
+
     def test_accepts_market_specific_weekly_chart_widths(self):
         cases = (
             ("SRIDEVI", "16/11/2026 to 22/11/2026", 7),
