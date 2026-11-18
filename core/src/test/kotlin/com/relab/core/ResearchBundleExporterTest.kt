@@ -36,7 +36,8 @@ class ResearchBundleExporterTest {
         val ledger = PredictionLearningLedger(listOf(prediction), listOf(attempt))
         val bytes = ResearchBundleExporter.export(
             listOf(observation), emptyList(), emptyList(), emptyList(),
-            Instant.parse("2026-11-17T12:00:00Z"), ledger
+            Instant.parse("2026-11-17T12:00:00Z"), ledger,
+            CrossMarketReverseEngineeringReport(2, 0, 1, emptyList(), "Exploratory only")
         )
         val entries = linkedMapOf<String, ByteArray>()
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
@@ -50,12 +51,14 @@ class ResearchBundleExporterTest {
         assertTrue(entries.keys.containsAll(listOf(
             "source-observations.csv", "derived-consensus-research.csv",
             "walk-forward-audit.csv", "historical-coverage-audit.csv",
-            "source-publication-timing.csv", "prediction-learning-ledger.csv", "research-manifest.json",
+            "source-publication-timing.csv", "prediction-learning-ledger.csv", "cross-market-associations.csv", "research-manifest.json",
             "README.txt", "bundle-index.json"
         )))
         val sourceCsv = String(entries.getValue("source-observations.csv"), Charsets.UTF_8)
         assertTrue(sourceCsv.contains("publisher-a"))
         assertTrue(sourceCsv.contains("577-99-667"))
+        val crossMarketCsv = String(entries.getValue("cross-market-associations.csv"), Charsets.UTF_8)
+        assertEquals(CrossMarketAssociationCsvExporter.HEADER, crossMarketCsv)
         val manifest = String(entries.getValue("research-manifest.json"), Charsets.UTF_8)
         assertTrue(manifest.contains("source_ledger_sha256"))
         val restoredLedger = PredictionLedgerCsvCodec.import(
