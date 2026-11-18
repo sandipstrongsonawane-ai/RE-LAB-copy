@@ -196,6 +196,21 @@ class HtmlChartImporterTest {
         }
     }
 
+    @Test fun preservesExactRepeatedDailyRowsInsteadOfSilentlyDeduplicatingThem() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>Result</th></tr>
+              <tr><td>2026-11-09</td><td>277-65-249</td></tr>
+              <tr><td>2026-11-09</td><td>277-65-249</td></tr>
+            </table>
+        """.trimIndent()
+        val report = HtmlChartImporter.import(html, url, Market.SRIDEVI, "main", retrieved)
+
+        assertEquals(2, report.observations.size)
+        assertEquals(listOf("277-65-249", "277-65-249"), report.observations.map { it.normalizedResult })
+        assertEquals(1, report.observations.map { it.date }.distinct().size)
+    }
+
     @Test fun rejectsNonHttpSchemes() {
         try {
             HtmlChartImporter.import("<table/>", "file:///tmp/chart.html", Market.SRIDEVI, "main", retrieved)
