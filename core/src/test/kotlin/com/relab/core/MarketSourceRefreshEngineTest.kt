@@ -206,4 +206,36 @@ class MarketSourceRefreshEngineTest {
         assertEquals(64, snapshot.sha256.length)
     }
 
+    @Test fun parsesSrideviNightThreeCellWeeklyMatrixWithNightSessionProvenance() {
+        val source = MarketSourceCatalog.sources.single {
+            it.sourceId == "sattamatkajodi" && it.market == Market.SRIDEVI_NIGHT
+        }.copy(enabled = true)
+        val html = """
+            <table>
+              <tr><th>Date</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th></tr>
+              <tr><td>28/1/19 to 3/2/19</td>
+                <td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td>
+                <td>* * *</td><td>**</td><td>* * *</td>
+              </tr>
+            </table>
+        """.trimIndent()
+        val report = MarketSourceRefreshEngine.refresh(
+            listOf(source),
+            fetch = { FetchedChartPage(html, it.url) },
+            retrievedAt = { Instant.parse("2026-11-19T03:00:00Z") }
+        )
+        assertEquals(1, report.successfulSources)
+        assertEquals(7, report.observations.size)
+        assertTrue(report.observations.all {
+            it.market == Market.SRIDEVI_NIGHT && it.sessionId == "night" && it.sourceId == "sattamatkajodi"
+        })
+        assertEquals("277-65-249", report.observations.first().normalizedResult)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, report.observations.last().status)
+    }
+
 }
