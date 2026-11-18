@@ -942,7 +942,21 @@ private fun RelabHome(
                 if (patternAnalyses.isEmpty()) {
                     Text(uiText(uiLanguage, "No valid published rows available for pattern analysis yet. Check the imported chart rows and source format.", "पैटर्न विश्लेषण के लिए अभी वैध प्रकाशित रिकॉर्ड नहीं हैं। इम्पोर्ट किए गए चार्ट रिकॉर्ड और सोर्स फॉर्मेट जांचें।", "पॅटर्न विश्लेषणासाठी अद्याप वैध प्रकाशित नोंदी नाहीत. आयात केलेल्या चार्ट नोंदी आणि स्रोत फॉरमॅट तपासा."))
                 } else {
-                    patternAnalyses.forEach { analysis -> PatternResearchCard(analysis, uiLanguage) }
+                    listOf("DAY", "NIGHT", "OTHER").forEach { period ->
+                        val periodRows = patternAnalyses.filter { researchPeriod(it.market, it.sessionId) == period }
+                        if (periodRows.isNotEmpty()) {
+                            Text(
+                                when (period) {
+                                    "DAY" -> uiText(uiLanguage, "DAY MARKET · दिन का बाजार", "DAY MARKET · दिन का बाजार", "DAY MARKET · दिवस बाजार")
+                                    "NIGHT" -> uiText(uiLanguage, "NIGHT MARKET · रात का बाजार", "NIGHT MARKET · रात का बाजार", "NIGHT MARKET · रात बाजार")
+                                    else -> uiText(uiLanguage, "OTHER / UNCLASSIFIED SESSIONS", "अन्य / अलग सेशन", "इतर / स्वतंत्र सत्र")
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            periodRows.forEach { analysis -> PatternResearchCard(analysis, uiLanguage) }
+                        }
+                    }
                 }
                 Text(uiText(uiLanguage, "Market Intelligence · market-specific behaviour", "मार्केट इंटेलिजेंस · मार्केट अनुसार व्यवहार", "मार्केट इंटेलिजन्स · मार्केटनुसार वर्तन"), style = MaterialTheme.typography.titleLarge)
                 Text(
@@ -1189,6 +1203,15 @@ private fun PublisherCoverageReportCard(
     }
 }
 
+private fun researchPeriod(market: com.relab.core.Market, sessionId: String): String {
+    val identity = "${market.name} ${sessionId}".uppercase(java.util.Locale.ROOT)
+    return when {
+        "NIGHT" in identity || "EVENING" in identity -> "NIGHT"
+        "DAY" in identity || "MORNING" in identity -> "DAY"
+        else -> "OTHER"
+    }
+}
+
 @Composable
 private fun MarketNextInsightCard(
     market: com.relab.core.Market, sessionId: String, records: List<com.relab.core.ChartRecord>,
@@ -1296,7 +1319,7 @@ private fun HomeReverseEngineeringCard(
         .take(2)
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("REVERSE-ENGINEERING RESEARCH · ${analysis.market} / ${analysis.sessionId}", style = MaterialTheme.typography.titleMedium)
+            Text("${researchPeriod(analysis.market, analysis.sessionId)} MARKET · REVERSE-ENGINEERING · ${analysis.market} / ${analysis.sessionId}", style = MaterialTheme.typography.titleMedium)
             Text("Dataset: ${analysis.acceptedRecords} valid rows · ${analysis.rejectedRecords} rejected", style = MaterialTheme.typography.bodySmall)
             Text("1) Family transition · Open: ${topCounts(analysis.openFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
