@@ -25,7 +25,9 @@ object SourceCsvImporter {
     fun import(csv: String): CsvImportReport {
         val rows = parseCsv(csv)
         if (rows.isEmpty()) return CsvImportReport(emptyList(), listOf(CsvImportIssue(1, "CSV is empty")))
-        val headers = rows.first().map { it.trim().lowercase() }
+        val headers = rows.first().mapIndexed { index, header ->
+            (if (index == 0) header.removePrefix("\uFEFF") else header).trim().lowercase()
+        }
         if (headers.size != headers.distinct().size) {
             return CsvImportReport(emptyList(), listOf(CsvImportIssue(1, "Duplicate header names")))
         }
