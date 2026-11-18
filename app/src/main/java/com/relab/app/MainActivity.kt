@@ -172,7 +172,7 @@ class MainActivity : ComponentActivity() {
                 initialObservations = database.loadObservations(),
                 initialPredictionLedger = database.loadPredictionLedger(),
                 onSaveLockedPrediction = { database.appendLockedPrediction(it) },
-                onSavePredictionVerification = { database.appendPredictionVerification(it) },
+                onSavePredictionVerification = { database.appendPredictionVerification(it) },\n                onRestorePredictionLedger = { database.appendPredictionLedger(it) },
                 onSaveCsv = { csv, observations ->
                     require(observations.isNotEmpty()) { "No valid source observations to save" }
                     database.appendDataset(csv, observations)
@@ -210,7 +210,7 @@ private fun RelabHome(
     initialObservations: List<com.relab.core.SourceObservation>,
     initialPredictionLedger: com.relab.core.PredictionLearningLedger,
     onSaveLockedPrediction: (com.relab.core.LockedSidePrediction) -> Unit,
-    onSavePredictionVerification: (com.relab.core.PredictionVerification) -> Unit,
+    onSavePredictionVerification: (com.relab.core.PredictionVerification) -> Unit,\n    onRestorePredictionLedger: (com.relab.core.PredictionLearningLedger) -> com.relab.core.PredictionLearningLedger,
     initialCoverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
     onSaveCoverageRange: (String, LocalDate, LocalDate) -> Unit,
     onSaveCsv: (String, List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
@@ -435,16 +435,30 @@ private fun RelabHome(
                         }
                         content
                     } ?: error("Verified bundle has no source-observations.csv")
-                    val parsed = SourceCsvImporter.import(sourceCsv)
-                    if (parsed.observations.isEmpty()) {
-                        importMessage = "Bundle verified, but no valid source observations were available to import."
+                    val ledgerCsv = ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+                        var content: String? = null
+                        while (true) {
+                            val entry = zip.nextEntry ?: break
+                            if (entry.name == "prediction-learning-ledger.csv") {
+                                content = readBoundedBytes(zip, MAX_BUNDLE_ARCHIVE_BYTES).toString(Charsets.UTF_8)
+                                break
+                            }
+                            zip.closeEntry()
+                        }
+                        content
+                    } ?: error("Verified bundle has no prediction-learning-ledger.csv")
+                    val importedLedger = com.relab.core.PredictionLedgerCsvCodec.import(ledgerCsv)
+                    if (parsed.observations.isEmpty() && importedLedger.lockedPredictions.isEmpty()) {
+                        importMessage = "Bundle verified, but it contains no valid source observations or locked predictions."
                     } else {
                         val previousCount = observations.size
-                        val merged = onSaveCsv(sourceCsv, parsed.observations)
+                        val merged = if (parsed.observations.isEmpty()) observations else onSaveCsv(sourceCsv, parsed.observations)
                         val addedCount = (merged.size - previousCount).coerceAtLeast(0)
+                        val restoredLedger = onRestorePredictionLedger(importedLedger)
                         observations = merged
+                        predictionLedger = restoredLedger
                         rawCsv = sourceCsv
-                        importMessage = "Verified bundle imported: ${validation.verifiedFiles} artifact checksums passed; added ${addedCount} observations. Total: ${merged.size}. Existing records and conflicts were retained. Row issues: ${parsed.issues.size}."
+                        importMessage = "Verified bundle restored: ${validation.verifiedFiles} artifact checksums passed; added ${addedCount} observations and restored ${importedLedger.lockedPredictions.size} locked predictions / ${importedLedger.verifications.size} verification attempts. Existing history was retained. Row issues: ${parsed.issues.size}."
                     }
                 }
             } catch (error: Exception) {
