@@ -268,14 +268,15 @@ private fun RelabHome(
     LaunchedEffect(observations, predictionLedger) {
         var currentLedger = predictionLedger
         currentLedger.lockedPredictions.forEach { prediction ->
-            val latest = currentLedger.verifications.filter { it.predictionId == prediction.id }
-                .maxByOrNull { it.attempt }
-            val targetRows = observations.filter {
-                it.market == prediction.market && it.sessionId == prediction.sessionId &&
-                    it.date == prediction.targetDate && it.status == ObservationStatus.PUBLISHED
+            val needsRecheck = runCatching {
+                com.relab.core.PredictionLearningCycle.needsReverification(
+                    currentLedger, prediction.id, observations
+                )
+            }.getOrElse { error ->
+                importMessage = "Prediction recheck pending: ${error.message ?: "evidence check failed"}"
+                false
             }
-            val freshEvidence = targetRows.any { row -> latest == null || row.retrievedAt.isAfter(latest.verifiedAt) }
-            if (targetRows.isNotEmpty() && freshEvidence && (latest == null || latest.grade == com.relab.core.PredictionGrade.GREY)) {
+            if (needsRecheck) {
                 runCatching {
                     val (updated, verification) = com.relab.core.PredictionLearningCycle.verify(
                         currentLedger, prediction.id, observations, java.time.Instant.now()
