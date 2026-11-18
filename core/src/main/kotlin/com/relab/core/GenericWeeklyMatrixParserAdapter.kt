@@ -89,7 +89,7 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
                 val raw = "${cells[matrix.dateIndex]} | ${weekdayAliases.entries.first { it.value == weekday }.key} | $cell"
                 val cleaned = compact.trim('*')
                 val statusAndResult = when {
-                    compact.isBlank() || cleaned.matches(Regex("[-—–]+")) ->
+                    compact.isBlank() || cleaned.isBlank() || cleaned.matches(Regex("[-—–]+")) ->
                         ObservationStatus.MISSING_FROM_SOURCE to null
                     cleaned.equals("holiday", true) || cleaned.equals("closed", true) ->
                         ObservationStatus.HOLIDAY_CLOSED to null
