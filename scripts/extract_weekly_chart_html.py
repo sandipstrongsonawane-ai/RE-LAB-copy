@@ -171,7 +171,7 @@ def extract_rows(
     output: list[dict[str, str]] = []
     issues: list[str] = []
     allowed_day_counts = {
-        "SRIDEVI": {7}, "SRIDEVI_NIGHT": {7}, "KALYAN": {6},
+        "SRIDEVI": {7}, "SRIDEVI_NIGHT": {7}, "KALYAN": {6, 7},
         "TIME_BAZAR": {7}, "MAIN_BAZAR": {5},
     }[market]
 
