@@ -42,6 +42,16 @@ class MarketSourceCatalogTest {
         )
     }
 
+    @Test fun includesKalyanMorningAndNightAsSeparateSessions() {
+        val morning = MarketSourceCatalog.enabledFor(Market.KALYAN_MORNING, "main").single()
+        val night = MarketSourceCatalog.enabledFor(Market.KALYAN_NIGHT, "night").single()
+        assertEquals("https://matkaflash.com/kalyan-morning/panel-chart", morning.url)
+        assertEquals("https://matkaflash.com/kalyan-night/panel-chart", night.url)
+        assertNotEquals(morning.market, night.market)
+        assertEquals("matkaflash", morning.sourceId)
+        assertEquals("matkaflash", night.sourceId)
+    }
+
     @Test fun sourceLookupUsesExactRegisteredUrl() {
         val source = MarketSourceCatalog.sources.first()
         assertEquals(source, MarketSourceCatalog.findByUrl(source.url))

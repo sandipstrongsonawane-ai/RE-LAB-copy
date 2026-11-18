@@ -54,6 +54,14 @@ object MarketSourceCatalog {
             "https://matkaflash.com/milan-day/panel-chart", "panel-history"
         ),
         MarketSource(
+            Market.KALYAN_MORNING, "main", "matkaflash",
+            "https://matkaflash.com/kalyan-morning/panel-chart", "panel-history"
+        ),
+        MarketSource(
+            Market.KALYAN_NIGHT, "night", "matkaflash",
+            "https://matkaflash.com/kalyan-night/panel-chart", "panel-history"
+        ),
+        MarketSource(
             Market.KALYAN, "main", "kalyanchart",
             "https://kalyanchart.cyou/history/", "archive",
             enabled = false,
