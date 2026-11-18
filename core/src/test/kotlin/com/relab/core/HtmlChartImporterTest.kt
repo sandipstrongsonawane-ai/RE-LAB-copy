@@ -255,4 +255,22 @@ class HtmlChartImporterTest {
             assertTrue(expected.message!!.contains("HTTP"))
         }
     }
+    @Test fun malformedWeeklyEndDateIsSkippedWithoutShiftingSessionRows() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th></tr>
+              <tr><td>18/2/19 to 24/2/16</td>
+                <td>277</td><td>65</td><td>249</td><td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td><td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td><td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td>
+              </tr>
+            </table>
+        """.trimIndent()
+        val report = HtmlChartImporter.import(html, url, Market.SRIDEVI_NIGHT, "night", retrieved)
+        assertTrue(report.observations.isEmpty())
+        assertEquals(1, report.skippedRows)
+        assertTrue(report.issues.any { it.contains("date range and weekly cell groups do not match") })
+    }
+
 }
