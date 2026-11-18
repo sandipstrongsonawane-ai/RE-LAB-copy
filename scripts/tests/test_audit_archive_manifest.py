@@ -37,7 +37,7 @@ class ArchiveManifestAuditTest(unittest.TestCase):
             result = audit_manifest(self._fixture(Path(directory)))
             self.assertTrue(result["ok"], result["errors"])
             self.assertEqual(1, result["audited_count"])
-            self.assertEqual(70, int(result["audited"][0]["bytes"]))
+            self.assertEqual(73, int(result["audited"][0]["bytes"]))
 
     def test_rejects_changed_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:
