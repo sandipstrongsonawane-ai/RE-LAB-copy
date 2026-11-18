@@ -172,7 +172,8 @@ class MainActivity : ComponentActivity() {
                 initialObservations = database.loadObservations(),
                 initialPredictionLedger = database.loadPredictionLedger(),
                 onSaveLockedPrediction = { database.appendLockedPrediction(it) },
-                onSavePredictionVerification = { database.appendPredictionVerification(it) },\n                onRestorePredictionLedger = { database.appendPredictionLedger(it) },
+                onSavePredictionVerification = { database.appendPredictionVerification(it) },
+                onRestorePredictionLedger = { database.appendPredictionLedger(it) },
                 onSaveCsv = { csv, observations ->
                     require(observations.isNotEmpty()) { "No valid source observations to save" }
                     database.appendDataset(csv, observations)
@@ -402,7 +403,7 @@ private fun RelabHome(
         if (uri != null) {
             try {
                 val bundle = ResearchBundleExporter.export(
-                    observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now()
+                    observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now(), predictionLedger
                 )
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bundle) }
                     ?: error("Research bundle file could not be written")
