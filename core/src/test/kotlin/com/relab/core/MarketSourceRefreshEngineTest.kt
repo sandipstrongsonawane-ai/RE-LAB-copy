@@ -59,6 +59,50 @@ class MarketSourceRefreshEngineTest {
         assertTrue(report.observations.all { it.sourceUrl == "https://same.example/chart" })
     }
 
+    @Test fun duplicateUrlWithDifferentMarketSessionsIsParsedIndependently() {
+        val registrations = listOf(
+            MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://same.example/chart", "panel"),
+            MarketSource(Market.KALYAN, "main", "publisher-b", "https://same.example/chart", "panel")
+        )
+        var fetchCount = 0
+        var parseCount = 0
+        val report = MarketSourceRefreshEngine.refresh(
+            registrations,
+            fetch = {
+                fetchCount++
+                FetchedChartPage(html, it.url)
+            },
+            retrievedAt = {
+                parseCount++
+                Instant.parse("2026-11-18T03:00:00Z")
+            }
+        )
+        assertEquals(1, fetchCount)
+        assertEquals(2, parseCount)
+        assertEquals(2, report.successfulSources)
+        assertEquals(setOf(Market.SRIDEVI, Market.KALYAN), report.observations.map { it.market }.toSet())
+    }
+
+    @Test fun disabledRegistrationDoesNotShareFetchWithEnabledDuplicateUrl() {
+        val registrations = listOf(
+            MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://same.example/chart", "panel", enabled = true),
+            MarketSource(Market.SRIDEVI, "main", "publisher-b", "https://same.example/chart", "panel", enabled = false)
+        )
+        var fetchCount = 0
+        val report = MarketSourceRefreshEngine.refresh(
+            registrations,
+            fetch = {
+                fetchCount++
+                FetchedChartPage(html, it.url)
+            }
+        )
+        assertEquals(1, fetchCount)
+        assertEquals(1, report.successfulSources)
+        assertEquals(1, report.failedSources)
+        assertEquals("publisher-a", report.outcomes[0].source.sourceId)
+        assertTrue(report.outcomes[1].errorMessage.orEmpty().contains("disabled"))
+    }
+
     @Test fun onePublisherFailureDoesNotStopOtherSources() {
         val failedSource = sridevi.first()
         val report = MarketSourceRefreshEngine.refresh(
