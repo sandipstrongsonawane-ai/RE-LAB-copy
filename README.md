@@ -11,9 +11,9 @@ RE-LAB is an independent project. It must not read, modify, or depend on the use
 - Import and reconcile historical chart records with source provenance.
 - Preserve raw source observations, including conflicting values, missing markers, holidays, and publication/update timestamps.
 - Keep market/session identity explicit; never merge similarly named sessions without evidence.
-- Derive and validate Panna, Jodi, digit-family, and descriptive pattern features.
+- Derive and validate Panna, Jodi, digit-family, weekday association, market-regime, cross-market, Sangam, and self-learning research findings.
 - Run chronological walk-forward analysis without future-data leakage.
-- Store data locally and support backup, restore, and export.
+- Store data locally and support backup, restore, and export of the complete findings set with SHA-256 integrity index.
 - Produce a complete Android APK and verify it with automated tests and on-device installation.
 
 ## Data integrity rules
@@ -77,7 +77,7 @@ The script does not fetch websites. Save the page yourself, pass the real retrie
 ## Development principles
 
 1. Evidence before claims: report only builds, tests, and device checks that actually ran.
-2. Historical validation must be chronological and leakage-free.
+2. Historical validation must be chronological and leakage-free. Weekday association is tested only on validated multi-source consensus rows, with permutation tests and within-session multiple-test correction.
 3. Keep source observations immutable; derived features are reproducible.
 4. Prefer a small, testable architecture over speculative features.
 5. Do not publish or merge changes without explicit approval.
