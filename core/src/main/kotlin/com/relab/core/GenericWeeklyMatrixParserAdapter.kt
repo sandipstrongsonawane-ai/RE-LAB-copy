@@ -140,15 +140,31 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
     }
 
     private fun parseRange(value: String): Pair<LocalDate, LocalDate>? {
-        val normalized = value.trim().replace(Regex("\\s+(to|through|-)\\s+", RegexOption.IGNORE_CASE), " to ")
-        val pieces = normalized.split(Regex("\\s+to\\s+", RegexOption.IGNORE_CASE))
-        if (pieces.size != 2) return null
-        fun parseDate(raw: String): LocalDate? = dateFormats.firstNotNullOfOrNull { formatter ->
-            try { LocalDate.parse(raw.trim(), formatter) } catch (_: DateTimeParseException) { null }
+        // Supports publisher variants such as:
+        // 29/12/25TO04/01/26, 16-11-2026 to 22-11-2026,
+        // and 16/11 to 22/11 2026 (year printed only once).
+        val match = Regex(
+            """^\\s*(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2,4}))?\\s*(?:to|through|[-–])\\s*(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2,4}))?(?:\\s+(\\d{4}))?\\s*$""",
+            RegexOption.IGNORE_CASE
+        ).matchEntire(value) ?: return null
+        val day1 = match.groupValues[1].toIntOrNull() ?: return null
+        val month1 = match.groupValues[2].toIntOrNull() ?: return null
+        val year1Raw = match.groupValues[3].takeIf { it.isNotBlank() }?.toIntOrNull()
+        val day2 = match.groupValues[4].toIntOrNull() ?: return null
+        val month2 = match.groupValues[5].toIntOrNull() ?: return null
+        val year2Raw = (match.groupValues[6].ifBlank { match.groupValues[7] })
+            .takeIf { it.isNotBlank() }?.toIntOrNull()
+        fun expandYear(year: Int?): Int? = year?.let { if (it < 100) 2000 + it else it }
+        val endYear = expandYear(year2Raw) ?: expandYear(year1Raw) ?: return null
+        var startYear = expandYear(year1Raw) ?: endYear
+        if (year1Raw == null && month1 > month2) startYear--
+        return try {
+            val start = LocalDate.of(startYear, month1, day1)
+            val end = LocalDate.of(endYear, month2, day2)
+            if (end.isBefore(start)) null else start to end
+        } catch (_: java.time.DateTimeException) {
+            null
         }
-        val start = parseDate(pieces[0]) ?: return null
-        val end = parseDate(pieces[1]) ?: return null
-        return if (!end.isBefore(start)) start to end else null
     }
 
     private fun normalizeResult(value: String): String? {
