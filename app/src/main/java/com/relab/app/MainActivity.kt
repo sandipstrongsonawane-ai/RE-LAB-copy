@@ -236,6 +236,8 @@ private fun RelabHome(
     var predictionLedger by remember { mutableStateOf(com.relab.core.PredictionLearningLedger(emptyList(), emptyList())) }
     var initialDataLoaded by remember { mutableStateOf(false) }
 
+    var importMessage by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         try {
             val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadInitialData() }
@@ -248,7 +250,6 @@ private fun RelabHome(
             initialDataLoaded = true
         }
     }
-    var importMessage by remember { mutableStateOf<String?>(null) }
     var chartUrl by remember { mutableStateOf("") }
     var marketSources by remember { mutableStateOf(initialMarketSources) }
     var sourceStatuses by remember { mutableStateOf(initialSourceStatuses) }
