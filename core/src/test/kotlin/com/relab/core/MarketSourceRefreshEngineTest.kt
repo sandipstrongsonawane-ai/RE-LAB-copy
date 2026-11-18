@@ -27,7 +27,7 @@ class MarketSourceRefreshEngineTest {
             MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://one.example/chart", "panel"),
             MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://two.example/history", "history")
         )
-        val report = MarketSourceRefreshEngine.refresh(pages, fetch = { FetchedChartPage(html, it.url) })
+        val report = MarketSourceRefreshEngine.refresh(pages, fetch = { FetchedChartPage(html, "https://landing.example/common") })
         assertEquals(2, report.observations.size)
         assertEquals(setOf("publisher-a"), report.observations.map { it.sourceId }.toSet())
         assertEquals(setOf("https://one.example/chart", "https://two.example/history"), report.observations.map { it.sourceUrl }.toSet())
