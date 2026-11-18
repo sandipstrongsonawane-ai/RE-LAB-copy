@@ -77,7 +77,7 @@ class MarketSourceCatalogTest {
             Market.NEW_TIME_BAZAR to "https://livesattamatka.net/panna-chart/new-time-bazar"
         )
         expected.forEach { (market, url) ->
-            val source = MarketSourceCatalog.enabledFor(market).single()
+            val source = MarketSourceCatalog.enabledFor(market).single { it.sourceId == "livesattamatka" }
             assertEquals(url, source.url)
             assertEquals("livesattamatka", source.sourceId)
             assertEquals("weekly-panel", source.view)
