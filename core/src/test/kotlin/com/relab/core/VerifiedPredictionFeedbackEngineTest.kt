@@ -56,6 +56,48 @@ class VerifiedPredictionFeedbackEngineTest {
         assertEquals(0.5, report.baselineSmoothedHitRate, 0.000001)
     }
 
+
+    @Test fun futureCandidateRankingReceivesBoundedVerifiedFeedbackAdjustment() {
+        val history = listOf(
+            "277-65-249", "578-07-368", "800-81-137",
+            "566-73-148", "288-82-679", "279-81-236"
+        ).flatMapIndexed { index, result ->
+            val date = LocalDate.of(2026, 11, 1).plusDays(index.toLong())
+            listOf("publisher-a", "publisher-b").map { source ->
+                SourceObservation(
+                    market = Market.SRIDEVI, sessionId = "main", date = date,
+                    sourceId = source, sourceUrl = "https://$source.example/chart",
+                    retrievedAt = Instant.parse("2026-11-17T10:00:00Z"),
+                    rawText = result, normalizedResult = result,
+                    status = ObservationStatus.PUBLISHED
+                )
+            }
+        }
+        val hit = prediction("2026-10-01", PannaSide.OPEN, listOf("123"))
+        val miss = prediction("2026-10-02", PannaSide.OPEN, listOf("111"))
+        val ledger = PredictionLearningLedger(
+            lockedPredictions = listOf(hit, miss),
+            verifications = listOf(
+                verification(hit, PredictionGrade.GREEN, "678"),
+                verification(miss, PredictionGrade.RED, "222")
+            )
+        )
+        val target = LocalDate.parse("2026-11-08")
+        val baseline = CandidateRankingEngine.rank(
+            history, Market.SRIDEVI, "main", target, PannaSide.OPEN, limit = 100
+        )
+        val learned = CandidateRankingEngine.rank(
+            history, Market.SRIDEVI, "main", target, PannaSide.OPEN,
+            limit = 100, learningLedger = ledger
+        )
+        val baseCandidate = baseline.candidates.single { it.panna == "578" }
+        val learnedCandidate = learned.candidates.single { it.panna == "578" }
+        assertEquals(0, baseCandidate.verifiedFeedbackExposure)
+        assertEquals(1, learnedCandidate.verifiedFeedbackExposure)
+        assertTrue(learnedCandidate.score > baseCandidate.score)
+        assertTrue(learnedCandidate.score - baseCandidate.score <= 5.0)
+    }
+
     @Test fun marketSessionAndSideRemainIsolated() {
         val prior = prediction("2026-10-01", PannaSide.OPEN, listOf("123"))
         val ledger = PredictionLearningLedger(
