@@ -61,7 +61,7 @@ object MarketSourceRefreshEngine {
                 SourceRefreshOutcome(
                     source = source,
                     // Keep the configured publisher identity across multiple URLs/views.
-                    observations = imported.observations.map { it.copy(sourceId = source.sourceId) },
+                    observations = imported.observations.map { it.copy(sourceId = source.sourceId, sourceUrl = source.url) },
                     skippedRows = imported.skippedRows,
                     issues = imported.issues
                 )
