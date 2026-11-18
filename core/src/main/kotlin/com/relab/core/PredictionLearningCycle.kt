@@ -94,6 +94,34 @@ data class PredictionLearningLedger(
  * The ledger is immutable so later learning cannot rewrite a historical prediction.
  */
 object PredictionLearningCycle {
+    /**
+     * Returns true only when a locked prediction has new grading-relevant evidence.
+     * GREY attempts are rechecked when reconciliation changes state (for example,
+     * single-source to independent consensus), regardless of the imported rows'
+     * historical retrievedAt timestamps. GREEN/RED remain terminal.
+     */
+    fun needsReverification(
+        ledger: PredictionLearningLedger,
+        predictionId: String,
+        observations: List<SourceObservation>
+    ): Boolean {
+        val prediction = ledger.lockedPredictions.singleOrNull { it.id == predictionId }
+            ?: throw IllegalArgumentException("Unknown locked prediction.")
+        val latest = ledger.verifications
+            .filter { it.predictionId == predictionId }
+            .maxByOrNull { it.attempt }
+        val currentState = SourceReconciliation.reconcile(observations).singleOrNull {
+            it.market == prediction.market && it.sessionId == prediction.sessionId &&
+                it.date == prediction.targetDate
+        }?.state ?: ReconciliationState.NO_PUBLISHED_RESULT
+
+        return when {
+            latest == null -> currentState != ReconciliationState.NO_PUBLISHED_RESULT
+            latest.grade != PredictionGrade.GREY -> false
+            else -> currentState != latest.reconciliationState
+        }
+    }
+
     fun lock(
         observations: List<SourceObservation>,
         market: Market,
