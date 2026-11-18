@@ -29,6 +29,12 @@ class PredictionLedgerCsvCodecTest {
     }
 
     @Test
+    fun acceptsUtf8BomBeforeFirstHeaderWithCrLfLineEndings() {
+        val csv = "\uFEFF" + PredictionLedgerCsvCodec.export(fixture()).replace("\n", "\r\n")
+        assertEquals(fixture(), PredictionLedgerCsvCodec.import(csv))
+    }
+
+    @Test
     fun rejectsCharactersAfterClosingQuotedField() {
         val csv = PredictionLedgerCsvCodec.export(fixture())
             .replace("\"frozen, \"\"fixture\"\"\nsecond line\"", "\"frozen, \"\"fixture\"\"\nsecond line\"x")
