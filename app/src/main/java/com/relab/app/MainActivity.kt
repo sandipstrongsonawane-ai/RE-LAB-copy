@@ -225,6 +225,20 @@ private fun RelabHome(
             )
         }
     }
+    val candidateWalkForwardReports = remember(observations) {
+        researchRecords.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
+            listOf(
+                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                    observations, market, sessionId, com.relab.core.PannaSide.OPEN,
+                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+                ),
+                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                    observations, market, sessionId, com.relab.core.PannaSide.CLOSE,
+                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+                )
+            )
+        }
+    }
     val researchExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) {
             try {
@@ -498,6 +512,16 @@ private fun RelabHome(
                         CandidateResearchCard(open, close, jodi)
                     }
                 }
+                Text("Candidate walk-forward backtest · chronological", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Each historical target is ranked using only eligible earlier dates. Single-source records are included only in this separately labelled exploratory report.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (candidateWalkForwardReports.isEmpty()) {
+                    Text("Candidate-specific backtest will appear when valid historical chart rows are available.")
+                } else {
+                    candidateWalkForwardReports.forEach { CandidateWalkForwardCard(it) }
+                }
                 Text("Historical coverage audit", style = MaterialTheme.typography.titleLarge)
                 if (coverageReports.isEmpty()) {
                     Text("Coverage audit will appear after source data is imported.")
@@ -536,6 +560,47 @@ private fun RelabHome(
     }
 }
 
+
+@Composable
+private fun CandidateWalkForwardCard(report: com.relab.core.CandidateWalkForwardReport) {
+    fun rate(hits: Int): String =
+        if (report.evaluatedDates == 0) "—" else "${"%.1f".format(hits * 100.0 / report.evaluatedDates)}%"
+
+    Card {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text("${report.market} · ${report.sessionId} · ${report.side}", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "${if (report.exploratory) "EXPLORATORY · SINGLE-SOURCE INCLUDED" else "CONSENSUS ONLY"}",
+                style = MaterialTheme.typography.labelSmall
+            )
+            Text(
+                "Targets: ${report.totalTargetDates} · Evaluated: ${report.evaluatedDates} · Insufficient earlier history: ${report.insufficientHistoryDates}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                "Actual panna in ranked list · Top 1: ${rate(report.top1Hits)} · Top 3: ${rate(report.top3Hits)} · Top 5: ${rate(report.top5Hits)} · Top 10: ${rate(report.top10Hits)}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                "Mean reciprocal rank: ${report.meanReciprocalRank?.let { "%.3f".format(it) } ?: "—"}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text("Candidate-level exact hits when selected", style = MaterialTheme.typography.titleSmall)
+            report.candidates.take(8).forEach { candidate ->
+                Text(
+                    "${candidate.panna} · ${candidate.exactHits}/${candidate.selectedCount} · ${"%.1f".format(candidate.hitRate * 100)}%" +
+                        if (candidate.lowSample) " · LOW SAMPLE" else "",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(report.warning, color = if (report.evaluatedDates < 30) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            Text(
+                "Historical sample performance only—not future probability, advice, or a guarantee. Candidate exposure and exact hits are counted separately.",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
 
 @Composable
 private fun CoverageReportCard(report: CoverageReport, onRangeApply: (LocalDate, LocalDate) -> Unit) {
