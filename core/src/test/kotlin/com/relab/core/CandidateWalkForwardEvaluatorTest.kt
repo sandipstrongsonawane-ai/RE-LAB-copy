@@ -110,6 +110,35 @@ class CandidateWalkForwardEvaluatorTest {
         assertEquals(3, report.evaluatedDates)
     }
 
+
+    @Test fun walkForwardPassesLearningLedgerWithoutUsingSameDayVerification() {
+        val prior = LockedSidePrediction(
+            Market.SRIDEVI, "main", LocalDate.parse("2026-10-01"), PannaSide.OPEN,
+            listOf("123"), 12, Instant.parse("2026-09-30T00:00:00Z"), "historical locked pick"
+        )
+        val outcome = PredictionVerification(
+            prior.id, PredictionGrade.GREEN, "678", "07", 1,
+            Instant.parse("2026-11-08T00:00:00Z"), ReconciliationState.CONSENSUS,
+            "verified on target date"
+        )
+        val ledger = PredictionLearningLedger(listOf(prior), listOf(outcome))
+        val target = LocalDate.parse("2026-11-08")
+        val base = CandidateRankingEngine.rank(
+            observations(), Market.SRIDEVI, "main", target, PannaSide.OPEN, limit = 100
+        )
+        val withLedger = CandidateRankingEngine.rank(
+            observations(), Market.SRIDEVI, "main", target, PannaSide.OPEN,
+            limit = 100, learningLedger = ledger
+        )
+        assertEquals(base.candidates, withLedger.candidates)
+
+        val report = CandidateWalkForwardEvaluator.evaluate(
+            observations(), Market.SRIDEVI, "main", PannaSide.OPEN,
+            minimumHistory = 5, topN = 10, learningLedger = ledger
+        )
+        assertEquals(4, report.evaluatedDates)
+    }
+
     @Test fun reportsCandidateExposureAndExactHitsSeparately() {
         val report = CandidateWalkForwardEvaluator.evaluate(
             observations(), Market.SRIDEVI, "main", PannaSide.OPEN,
