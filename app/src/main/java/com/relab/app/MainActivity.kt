@@ -548,6 +548,13 @@ private fun RelabHome(
                         val latest = researchRecords.filter { it.market == market && it.sessionId == open.sessionId }.maxByOrNull { it.date }
                         val pattern = patternAnalyses.firstOrNull { it.market == market && it.sessionId == open.sessionId }
                         val intelligence = intelligenceReports.firstOrNull { it.market == market && it.sessionId == open.sessionId }
+                        val openDigits = open.candidates.groupBy { it.panna.sumOf(Char::digitToInt) % 10 }
+                            .map { (digit, rows) -> digit to rows.maxOf { it.score } }
+                            .sortedByDescending { it.second }.take(3)
+                        val openDp = open.candidates.filter { it.pannaType == com.relab.core.PannaType.DP }.take(3)
+                        val openTp = open.candidates.filter { it.pannaType == com.relab.core.PannaType.TP }.take(3)
+                        val closeDp = close.candidates.filter { it.pannaType == com.relab.core.PannaType.DP }.take(3)
+                        val closeTp = close.candidates.filter { it.pannaType == com.relab.core.PannaType.TP }.take(3)
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -565,6 +572,9 @@ private fun RelabHome(
                                 } else {
                                     Text("OPEN PANNA research: ${open.candidates.take(3).joinToString("  ·  ") { "${it.panna} (index ${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
                                     Text("CLOSE PANNA research: ${close.candidates.take(3).joinToString("  ·  ") { "${it.panna} (index ${"%.1f".format(it.score)})" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("OPEN DIGIT research: ${openDigits.joinToString("  ·  ") { "${it.first} (index ${"%.1f".format(it.second)})" }.ifBlank { "Not enough evidence" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("OPEN DP: ${openDp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported DP candidate" }}  |  OPEN TP: ${openTp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported TP candidate" }}", style = MaterialTheme.typography.bodySmall)
+                                    Text("CLOSE DP: ${closeDp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported DP candidate" }}  |  CLOSE TP: ${closeTp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported TP candidate" }}", style = MaterialTheme.typography.bodySmall)
                                     Text("JODI research: ${jodi.take(5).joinToString("  ·  ") { "${it.jodi} (index ${"%.1f".format(it.score)})" }.ifBlank { "Not enough paired evidence" }}", style = MaterialTheme.typography.bodyMedium)
                                 }
                                 Text(
