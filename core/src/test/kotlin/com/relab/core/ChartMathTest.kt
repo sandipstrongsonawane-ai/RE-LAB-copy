@@ -23,6 +23,15 @@ class ChartMathTest {
         assertEquals(listOf(0, 1, 2, 3, 4, 0, 1, 2, 3, 4), (0..9).map(ChartMath::family))
     }
 
+    @Test fun marketCatalogContainsNoDuplicateIdentities() {
+        val names = Market.entries.map { it.name }
+        assertEquals(names.size, names.distinct().size)
+        assertTrue(names.containsAll(listOf(
+            "TIME_BAZAR", "TIME_BAZAR_DAY", "NEW_TIME_BAZAR",
+            "MAIN_BAZAR", "MAIN_BAZAR_NIGHT", "MAIN_BAZAR_MORNING"
+        )))
+    }
+
     @Test fun preservesLeadingZeroJodi() {
         val result = ChartMath.validate(record("578", "07", "368"))
         assertTrue(result is ValidationResult.Valid)
