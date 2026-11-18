@@ -202,8 +202,8 @@ private fun RelabHome(
     var marketSources by remember { mutableStateOf(initialMarketSources) }
     var sourceUrlInput by remember { mutableStateOf("") }
     var sourcePublisherInput by remember { mutableStateOf("") }
-    var sourceMarketInput by remember { mutableStateOf("SRIDEVI") }
-    var sourceSessionInput by remember { mutableStateOf("main") }
+    var sourceMarketInput by remember { mutableStateOf("") }
+    var sourceSessionInput by remember { mutableStateOf("") }
     var editingSourceUrl by remember { mutableStateOf<String?>(null) }
     var linkBusy by remember { mutableStateOf(false) }
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
@@ -487,8 +487,8 @@ private fun RelabHome(
                         Text("Har saved URL ka apna source history rahega. Same publisher ke multiple pages ek hi evidence identity use karenge.")
                         OutlinedTextField(sourceUrlInput, { sourceUrlInput = it }, label = { Text("Chart URL (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(sourcePublisherInput, { sourcePublisherInput = it }, label = { Text("Publisher identity (same publisher ke pages par same naam)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text("Market: SRIDEVI, SRIDEVI_NIGHT, KALYAN, TIME_BAZAR, MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(sourceSessionInput, { sourceSessionInput = it }, label = { Text("Session ID (e.g. main / night / evening)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text("Market (auto-detect if known; otherwise enter market)") }, placeholder = { Text("SRIDEVI / SRIDEVI_NIGHT / KALYAN / TIME_BAZAR / MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceSessionInput, { sourceSessionInput = it }, label = { Text("Session ID (required if URL is not recognized)") }, placeholder = { Text("main / night / evening") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Button(
                             enabled = sourceUrlInput.isNotBlank() && sourceSessionInput.isNotBlank() && !linkBusy,
                             onClick = {
@@ -496,8 +496,16 @@ private fun RelabHome(
                                     val uri = java.net.URI(sourceUrlInput.trim())
                                     val publisher = sourcePublisherInput.trim().ifBlank { uri.host.orEmpty().removePrefix("www.") }
                                         .lowercase().replace(Regex("[^a-z0-9.-]+"), "-").trim('-')
-                                    val market = com.relab.core.Market.valueOf(sourceMarketInput.trim().uppercase())
-                                    val source = MarketSource(market, sourceSessionInput.trim(), publisher, sourceUrlInput.trim(), "user-added")
+                                    val detectedMarket = com.relab.core.Market.fromSourceUrl(sourceUrlInput.trim())
+                                    val marketName = sourceMarketInput.trim().ifBlank {
+                                        detectedMarket?.name ?: error("Market could not be auto-detected. Select the market explicitly.")
+                                    }
+                                    val market = com.relab.core.Market.valueOf(marketName.uppercase())
+                                    val detectedSession = if (detectedMarket == com.relab.core.Market.SRIDEVI_NIGHT) "night" else "main"
+                                    val session = sourceSessionInput.trim().ifBlank {
+                                        if (detectedMarket != null) detectedSession else error("Session is ambiguous. Enter a session ID.")
+                                    }
+                                    val source = MarketSource(market, session, publisher, sourceUrlInput.trim(), "user-added")
                                     marketSources = if (editingSourceUrl == null) {
                                         UserMarketSourceRegistry.add(marketSources, source)
                                     } else {
@@ -507,8 +515,8 @@ private fun RelabHome(
                                     editingSourceUrl = null
                                     sourceUrlInput = ""
                                     sourcePublisherInput = ""
-                                    sourceMarketInput = "SRIDEVI"
-                                    sourceSessionInput = "main"
+                                    sourceMarketInput = ""
+                                    sourceSessionInput = ""
                                     importMessage = "Source saved. Parser support will be checked on refresh; unsupported pages remain marked, no chart will be fabricated."
                                 } catch (error: Exception) {
                                     importMessage = "Source not added: ${error.message ?: "Check URL, publisher, market and session."}"
@@ -517,7 +525,13 @@ private fun RelabHome(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text(if (editingSourceUrl == null) "Add chart source" else "Save source changes") }
                         if (editingSourceUrl != null) {
-                            OutlinedButton(onClick = { editingSourceUrl = null; sourceUrlInput = ""; sourcePublisherInput = "" }) { Text("Cancel edit") }
+                            OutlinedButton(onClick = {
+                                editingSourceUrl = null
+                                sourceUrlInput = ""
+                                sourcePublisherInput = ""
+                                sourceMarketInput = ""
+                                sourceSessionInput = ""
+                            }) { Text("Cancel edit") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
