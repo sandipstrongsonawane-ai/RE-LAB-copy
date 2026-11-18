@@ -52,7 +52,7 @@ class ResearchBundleExporterTest {
             "source-observations.csv", "derived-consensus-research.csv",
             "walk-forward-audit.csv", "historical-coverage-audit.csv",
             "source-publication-timing.csv", "prediction-learning-ledger.csv", "cross-market-associations.csv", "research-manifest.json",
-            "candidate-walk-forward-audit.csv", "README.txt", "bundle-index.json"
+            "candidate-walk-forward-audit.csv", "market-regime-change-audit.csv", "README.txt", "bundle-index.json"
         )))
         val sourceCsv = String(entries.getValue("source-observations.csv"), Charsets.UTF_8)
         assertTrue(sourceCsv.contains("publisher-a"))
@@ -60,6 +60,7 @@ class ResearchBundleExporterTest {
         val crossMarketCsv = String(entries.getValue("cross-market-associations.csv"), Charsets.UTF_8)
         assertEquals(CrossMarketAssociationCsvExporter.HEADER, crossMarketCsv)
         assertEquals(CandidateWalkForwardCsvExporter.HEADER, String(entries.getValue("candidate-walk-forward-audit.csv"), Charsets.UTF_8))
+        assertEquals(MarketRegimeChangeCsvExporter.HEADER, String(entries.getValue("market-regime-change-audit.csv"), Charsets.UTF_8))
         val manifest = String(entries.getValue("research-manifest.json"), Charsets.UTF_8)
         assertTrue(manifest.contains("source_ledger_sha256"))
         val restoredLedger = PredictionLedgerCsvCodec.import(
