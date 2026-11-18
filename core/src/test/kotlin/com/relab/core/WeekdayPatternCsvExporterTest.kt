@@ -1,8 +1,8 @@
 package com.relab.core
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class WeekdayPatternCsvExporterTest {
     @Test
@@ -16,6 +16,6 @@ class WeekdayPatternCsvExporterTest {
         assertEquals(2, lines.size)
         assertTrue(lines[0].contains("adjusted_q_value"))
         assertTrue(lines[1].contains("INSUFFICIENT_HISTORY"))
-        assertTrue(lines[1].contains("\"\"Need more history, across weekdays\"\"") || lines[1].contains("\"Need more history, across weekdays\""))
+        assertTrue(lines[1].contains("\"Need more history, across weekdays\""))
     }
 }
