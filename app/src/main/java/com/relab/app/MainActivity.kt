@@ -402,6 +402,19 @@ private fun RelabHome(
         }
     }
 
+    val sourceJsonExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val json = com.relab.core.SourceObservationJsonExporter.export(observations, java.time.Instant.now())
+                context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(json) }
+                    ?: error("Source observation JSON file could not be written")
+                importMessage = "Exported lossless JSON for ${observations.size} source observations, including raw values and provenance."
+            } catch (error: Exception) {
+                importMessage = "Source JSON export error: ${error.message ?: "Unknown error"}"
+            }
+        }
+    }
+
     val coverageReports = dashboardAnalytics?.coverageReports.orEmpty()
     val publisherCoverageReports = dashboardAnalytics?.publisherCoverageReports.orEmpty()
 
@@ -864,6 +877,10 @@ private fun RelabHome(
                             onClick = { exportPicker.launch("relab-source-backup.csv") },
                             enabled = observations.isNotEmpty()
                         ) { Text(uiText(uiLanguage, "Export backup", "बैकअप एक्सपोर्ट", "बॅकअप एक्सपोर्ट")) }
+                        OutlinedButton(
+                            onClick = { sourceJsonExportPicker.launch("relab-source-observations.json") },
+                            enabled = observations.isNotEmpty()
+                        ) { Text(uiText(uiLanguage, "Export source JSON", "सोर्स JSON एक्सपोर्ट", "स्रोत JSON एक्सपोर्ट")) }
                     }
                     OutlinedButton(onClick = {
                         rawCsv = null
