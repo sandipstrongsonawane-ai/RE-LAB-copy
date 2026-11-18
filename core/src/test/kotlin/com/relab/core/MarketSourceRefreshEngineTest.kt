@@ -32,6 +32,33 @@ class MarketSourceRefreshEngineTest {
         assertEquals(setOf("https://one.example/chart", "https://two.example/history"), report.observations.map { it.sourceUrl }.toSet())
     }
 
+    @Test fun exactDuplicateUrlsAreFetchedAndParsedOncePerMarketSession() {
+        val duplicateSources = listOf(
+            MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://same.example/chart", "panel"),
+            MarketSource(Market.SRIDEVI, "main", "publisher-b", "https://same.example/chart", "panel")
+        )
+        var fetchCount = 0
+        var parseTimestampCount = 0
+        val report = MarketSourceRefreshEngine.refresh(
+            duplicateSources,
+            fetch = {
+                fetchCount++
+                FetchedChartPage(html, it.url)
+            },
+            retrievedAt = {
+                parseTimestampCount++
+                Instant.parse("2026-11-18T03:00:00Z")
+            }
+        )
+        assertEquals(1, fetchCount)
+        assertEquals(1, parseTimestampCount)
+        assertEquals(2, report.successfulSources)
+        assertEquals(2, report.observations.size)
+        assertEquals(listOf("publisher-a", "publisher-b"), report.outcomes.map { it.source.sourceId })
+        assertEquals(setOf("publisher-a", "publisher-b"), report.observations.map { it.sourceId }.toSet())
+        assertTrue(report.observations.all { it.sourceUrl == "https://same.example/chart" })
+    }
+
     @Test fun onePublisherFailureDoesNotStopOtherSources() {
         val failedSource = sridevi.first()
         val report = MarketSourceRefreshEngine.refresh(
