@@ -12,7 +12,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         val html = """
             <table>
               <tr><th>Week Range</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th><th>Sunday</th></tr>
-              <tr><td>16-11-2026 to 22-11-2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+              <tr><td>16-11-2026 to 22-11-2026</td><td>67924455</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
             </table>
         """.trimIndent()
         val url = "https://charts.example.org/market/sridevi"
@@ -26,7 +26,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertEquals("123-65-456", monday.normalizedResult)
         assertEquals("charts.example.org", monday.sourceId)
         assertEquals(url, monday.sourceUrl)
-        assertTrue(monday.rawText.contains("12365456"))
+        assertTrue(monday.rawText.contains("67924455"))
         assertTrue(parsed.observations.all { it.status == ObservationStatus.PUBLISHED })
     }
 
@@ -52,7 +52,7 @@ class GenericWeeklyMatrixParserAdapterTest {
     }
 
     @Test fun refusesUnrecognizedHeadersAndDoesNotInventDateRows() {
-        val html = "<table><tr><th>Date</th><th>Result</th></tr><tr><td>16-11-2026</td><td>12365456</td></tr></table>"
+        val html = "<table><tr><th>Date</th><th>Result</th></tr><tr><td>16-11-2026</td><td>67924455</td></tr></table>"
         assertFalse(GenericWeeklyMatrixParserAdapter.supports(html, "https://publisher.test/chart"))
         try {
             GenericWeeklyMatrixParserAdapter.parse(html, "https://publisher.test/chart", Market.SRIDEVI, "main", retrievedAt)
@@ -102,8 +102,8 @@ class GenericWeeklyMatrixParserAdapterTest {
         val html = """
             <table>
               <tr><th>Date</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
-              <tr><td>16/11/2026 to 22/11/2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
-              <tr><td>16/11/2026 to 22/11/2026</td><td>99965456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+              <tr><td>16/11/2026 to 22/11/2026</td><td>67924455</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+              <tr><td>16/11/2026 to 22/11/2026</td><td>23505140</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
             </table>
         """.trimIndent()
         val parsed = GenericWeeklyMatrixParserAdapter.parse(
@@ -112,7 +112,7 @@ class GenericWeeklyMatrixParserAdapterTest {
 
         val mondayRows = parsed.observations.filter { it.date == LocalDate.parse("2026-11-16") }
         assertEquals(2, mondayRows.size)
-        assertEquals(setOf("123-65-456", "999-65-456"), mondayRows.mapNotNull { it.normalizedResult }.toSet())
+        assertEquals(setOf("679-24-455", "235-05-140"), mondayRows.mapNotNull { it.normalizedResult }.toSet())
         assertEquals(14, parsed.observations.size)
     }
 
@@ -120,7 +120,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         val html = """
             <table>
               <tr><th>Week</th><th>Sunday</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr>
-              <tr><td>15/11/2026 to 21/11/2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+              <tr><td>15/11/2026 to 21/11/2026</td><td>67924455</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
             </table>
         """.trimIndent()
         val url = "https://publisher.example/history/sridevi"
@@ -141,7 +141,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         val html = """
             <table>
               <tr><th>Week</th><th>Sunday</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr>
-              <tr><td>16/11/2026 to 22/11/2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+              <tr><td>16/11/2026 to 22/11/2026</td><td>67924455</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
             </table>
         """.trimIndent()
         assertTrue(GenericWeeklyMatrixParserAdapter.supports(html, "https://publisher.example/chart"))
