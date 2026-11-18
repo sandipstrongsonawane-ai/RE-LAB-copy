@@ -1132,10 +1132,10 @@ private fun MarketNextInsightCard(
     val doublePannas = pannaTypes.filter { (_, type) -> type.name.contains("DOUBLE") || type.name == "DP" }.map { it.first }
     val triplePannas = pannaTypes.filter { (_, type) -> type.name.contains("TRIPLE") || type.name == "TP" }.map { it.first }
     val pannaDenominator = features.size * 2
-    val ageHours = latestRetrievedAt?.let { java.time.Duration.between(it, java.time.Instant.now()).toHours().coerceAtLeast(0) }
+    val ageHours = latestRetrievedAt?.let { java.time.Duration.between(it, java.time.Instant.now()).toHours().coerceAtLeast(0) } ?: Long.MAX_VALUE
     val freshnessLabel = when {
         latestRetrievedAt == null -> "NO SOURCE FETCH"
-        ageHours!! >= 72 -> "STALE · \${ageHours}h"
+        ageHours >= 72 -> "STALE · \${ageHours}h"
         ageHours >= 24 -> "AGING · \${ageHours}h"
         else -> "RECENT · \${ageHours}h"
     }
