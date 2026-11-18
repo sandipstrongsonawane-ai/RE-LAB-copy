@@ -20,6 +20,7 @@ internal data class DashboardAnalytics(
     val regimeChangeFindings: List<RegimeChangeFinding>,
     val weekdayPatternFindings: List<WeekdayPatternFinding>,
     val candidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
+    val verifiedCandidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
     val sangamResearchSets: List<SangamResearchSet>,
     val sangamWalkForwardReports: List<SangamWalkForwardReport>,
     val selfLearningReports: List<HypothesisDiscoveryReport>,
@@ -100,6 +101,23 @@ internal data class DashboardAnalytics(
                         open.candidates, close.candidates, limit = 10
                     ))
                 }
+
+            // Verified mode is strictly consensus-only. Exploratory mode is kept in
+            // candidateSets and may include single-publisher rows, with an explicit label.
+            val verifiedCandidateSets = marketSessionKeys.map { (market, sessionId) ->
+                val target = LocalDate.now()
+                val open = CandidateRankingEngine.rank(
+                    observations, market, sessionId, target, PannaSide.OPEN,
+                    limit = 10, minimumHistory = 5, allowSingleSourceExploration = false,
+                    learningLedger = learningLedger
+                )
+                val close = CandidateRankingEngine.rank(
+                    observations, market, sessionId, target, PannaSide.CLOSE,
+                    limit = 10, minimumHistory = 5, allowSingleSourceExploration = false,
+                    learningLedger = learningLedger
+                )
+                Triple(open, close, CandidateRankingEngine.deriveJodiCandidates(open.candidates, close.candidates, limit = 10))
+            }
 
             val sangamResearchSets = candidateSets.map { (open, close, _) ->
                 SangamCandidateEngine.derive(open.candidates, close.candidates, limit = 10)
@@ -212,6 +230,7 @@ internal data class DashboardAnalytics(
                 regimeChangeFindings = regimeChangeFindings,
                 weekdayPatternFindings = weekdayPatternFindings,
                 candidateSets = candidateSets,
+                verifiedCandidateSets = verifiedCandidateSets,
                 sangamResearchSets = sangamResearchSets,
                 sangamWalkForwardReports = sangamWalkForwardReports,
                 selfLearningReports = selfLearningReports,
