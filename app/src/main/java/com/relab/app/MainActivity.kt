@@ -230,6 +230,14 @@ private fun RelabHome(
             listOf(
                 com.relab.core.CandidateWalkForwardEvaluator.evaluate(
                     observations, market, sessionId, com.relab.core.PannaSide.OPEN,
+                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
+                ),
+                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                    observations, market, sessionId, com.relab.core.PannaSide.CLOSE,
+                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
+                ),
+                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                    observations, market, sessionId, com.relab.core.PannaSide.OPEN,
                     minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
                 ),
                 com.relab.core.CandidateWalkForwardEvaluator.evaluate(
@@ -514,7 +522,7 @@ private fun RelabHome(
                 }
                 Text("Candidate walk-forward backtest · chronological", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Each historical target is ranked using only eligible earlier dates. Single-source records are included only in this separately labelled exploratory report.",
+                    "Consensus-only and single-source-inclusive exploratory backtests are shown separately. Every target is ranked using only eligible earlier dates.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (candidateWalkForwardReports.isEmpty()) {
