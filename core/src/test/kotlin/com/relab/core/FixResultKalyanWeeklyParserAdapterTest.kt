@@ -48,14 +48,14 @@ class FixResultKalyanWeeklyParserAdapterTest {
         val html = """
             <table>
               <tr><th>Date Range</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr>
-              <tr><td>16-11-2026 to 21-11-2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td></tr>
-              <tr><td>16-11-2026 to 21-11-2026</td><td>99965456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td></tr>
+              <tr><td>16-11-2026 to 21-11-2026</td><td>67924455</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td></tr>
+              <tr><td>16-11-2026 to 21-11-2026</td><td>23505140</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td></tr>
             </table>
         """.trimIndent()
         val parsed = FixResultKalyanWeeklyParserAdapter.parse(html, pageUrl, Market.KALYAN, "main", retrievedAt)
         val monday = parsed.observations.filter { it.date == LocalDate.parse("2026-11-16") }
         assertEquals(2, monday.size)
-        assertEquals(setOf("123-65-456", "999-65-456"), monday.mapNotNull { it.normalizedResult }.toSet())
+        assertEquals(setOf("679-24-455", "235-05-140"), monday.mapNotNull { it.normalizedResult }.toSet())
         assertEquals(ReconciliationState.CONFLICT, SourceReconciliation.reconcile(monday).single().state)
     }
 
