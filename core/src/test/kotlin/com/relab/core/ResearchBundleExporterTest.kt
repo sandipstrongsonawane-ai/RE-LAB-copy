@@ -53,15 +53,15 @@ class ResearchBundleExporterTest {
             "source-publication-timing.csv", "prediction-learning-ledger.csv", "research-manifest.json",
             "README.txt", "bundle-index.json"
         )))
-        val ledger = String(entries.getValue("source-observations.csv"), Charsets.UTF_8)
-        assertTrue(ledger.contains("publisher-a"))
-        assertTrue(ledger.contains("577-99-667"))
+        val sourceCsv = String(entries.getValue("source-observations.csv"), Charsets.UTF_8)
+        assertTrue(sourceCsv.contains("publisher-a"))
+        assertTrue(sourceCsv.contains("577-99-667"))
         val manifest = String(entries.getValue("research-manifest.json"), Charsets.UTF_8)
         assertTrue(manifest.contains("source_ledger_sha256"))
         val restoredLedger = PredictionLedgerCsvCodec.import(
             String(entries.getValue("prediction-learning-ledger.csv"), Charsets.UTF_8)
         )
-        assertEquals(ledger, restoredLedger)
+        assertEquals(PredictionLearningLedger(listOf(prediction), listOf(attempt)), restoredLedger)
         assertTrue(String(entries.getValue("README.txt"), Charsets.UTF_8).contains("Locked predictions: 1"))
         val index = String(entries.getValue("bundle-index.json"), Charsets.UTF_8)
         val expectedHash = MessageDigest.getInstance("SHA-256")
