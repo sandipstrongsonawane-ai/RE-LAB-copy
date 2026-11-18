@@ -93,7 +93,7 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
                         ObservationStatus.MISSING_FROM_SOURCE to null
                     cleaned.equals("holiday", true) || cleaned.equals("closed", true) ->
                         ObservationStatus.HOLIDAY_CLOSED to null
-                    cleaned.equals("pending", true) || cleaned.equals("waiting", true) ->
+                    cleaned.equals("pending", true) || cleaned.equals("waiting", true) || compact.contains("*") ->
                         ObservationStatus.PENDING to null
                     else -> {
                         val normalized = normalizeResult(cleaned)

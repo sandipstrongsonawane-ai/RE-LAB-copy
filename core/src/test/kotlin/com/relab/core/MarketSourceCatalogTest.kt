@@ -26,6 +26,22 @@ class MarketSourceCatalogTest {
         assertTrue(source.note.contains("session"))
     }
 
+
+    @Test fun usesFullHistoryPanelChartPagesForMatkaFlash() {
+        assertEquals(
+            "https://matkaflash.com/sridevi/panel-chart",
+            MarketSourceCatalog.enabledFor(Market.SRIDEVI).single { it.sourceId == "matkaflash" }.url
+        )
+        assertEquals(
+            "https://matkaflash.com/kalyan/panel-chart",
+            MarketSourceCatalog.enabledFor(Market.KALYAN).single { it.sourceId == "matkaflash" }.url
+        )
+        assertEquals(
+            "https://matkaflash.com/milan-day/panel-chart",
+            MarketSourceCatalog.enabledFor(Market.MILAN_DAY).single().url
+        )
+    }
+
     @Test fun sourceLookupUsesExactRegisteredUrl() {
         val source = MarketSourceCatalog.sources.first()
         assertEquals(source, MarketSourceCatalog.findByUrl(source.url))

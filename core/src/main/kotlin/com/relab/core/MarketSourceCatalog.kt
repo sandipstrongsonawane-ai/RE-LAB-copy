@@ -39,7 +39,7 @@ object MarketSourceCatalog {
         ),
         MarketSource(
             Market.SRIDEVI, "main", "matkaflash",
-            "https://matkaflash.com/sridevi?tab=history", "panel-history"
+            "https://matkaflash.com/sridevi/panel-chart", "panel-history"
         ),
         MarketSource(
             Market.KALYAN, "main", "fixresult",
@@ -47,7 +47,7 @@ object MarketSourceCatalog {
         ),
         MarketSource(
             Market.KALYAN, "main", "matkaflash",
-            "https://matkaflash.com/kalyan", "panel-history"
+            "https://matkaflash.com/kalyan/panel-chart", "panel-history"
         ),
         MarketSource(
             Market.MILAN_DAY, "main", "matkaflash",

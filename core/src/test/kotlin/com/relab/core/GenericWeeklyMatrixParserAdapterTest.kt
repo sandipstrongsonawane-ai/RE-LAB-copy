@@ -145,6 +145,28 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertEquals("matkaflash.com", parsed.observations.first().sourceId)
     }
 
+
+    @Test fun parsesKalyanSundayRowsAndKeepsPartialOpenResultsPending() {
+        val html = """
+            <table>
+              <tr><th>Week</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+              <tr><td>09 Nov 2026</td><td>390-24-257</td><td>390-24-257</td><td>256-3*-***</td><td>390-24-257</td><td>390-24-257</td><td>Holiday</td><td>390-24-257</td></tr>
+            </table>
+        """.trimIndent()
+        val url = "https://matkaflash.com/kalyan/panel-chart"
+        val parsed = ChartParserRegistry.parse(html, url, Market.KALYAN, "main", retrievedAt)
+
+        assertEquals(7, parsed.observations.size)
+        val partial = parsed.observations.single { it.date == LocalDate.parse("2026-11-11") }
+        assertEquals(ObservationStatus.PENDING, partial.status)
+        assertNull(partial.normalizedResult)
+        val saturday = parsed.observations.single { it.date == LocalDate.parse("2026-11-14") }
+        assertEquals(ObservationStatus.HOLIDAY_CLOSED, saturday.status)
+        val sunday = parsed.observations.single { it.date == LocalDate.parse("2026-11-15") }
+        assertEquals("390-24-257", sunday.normalizedResult)
+        assertEquals(ObservationStatus.PUBLISHED, sunday.status)
+    }
+
     @Test fun preservesRepeatedDateRowsSoConflictingPublisherValuesAreNotSilentlyDiscarded() {
         val html = """
             <table>
