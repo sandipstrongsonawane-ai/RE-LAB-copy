@@ -341,6 +341,7 @@ private fun RelabHome(
     val patternAnalyses = dashboardAnalytics?.patternAnalyses.orEmpty()
     val intelligenceReports = dashboardAnalytics?.intelligenceReports.orEmpty()
     val candidateSets = dashboardAnalytics?.candidateSets.orEmpty()
+    val sangamResearchSets = dashboardAnalytics?.sangamResearchSets.orEmpty()
     val selfLearningReports = dashboardAnalytics?.selfLearningReports.orEmpty()
     val candidateWalkForwardReports = dashboardAnalytics?.candidateWalkForwardReports.orEmpty()
     val researchExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
@@ -561,6 +562,7 @@ private fun RelabHome(
                         } ?: "NO ROW"
                         val pattern = patternAnalyses.firstOrNull { it.market == market && it.sessionId == open.sessionId }
                         val intelligence = intelligenceReports.firstOrNull { it.market == market && it.sessionId == open.sessionId }
+                        val sangam = sangamResearchSets.getOrNull(candidateSets.indexOfFirst { it.first.market == market && it.first.sessionId == open.sessionId })
                         val openDigits = open.candidates.groupBy { it.panna.sumOf(Char::digitToInt) % 10 }
                             .map { (digit, rows) -> digit to rows.maxOf { it.score } }
                             .sortedByDescending { it.second }.take(3)
@@ -589,6 +591,8 @@ private fun RelabHome(
                                     Text("OPEN DP: ${openDp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported DP candidate" }}  |  OPEN TP: ${openTp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported TP candidate" }}", style = MaterialTheme.typography.bodySmall)
                                     Text("CLOSE DP: ${closeDp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported DP candidate" }}  |  CLOSE TP: ${closeTp.joinToString("  ·  ") { it.panna }.ifBlank { "No supported TP candidate" }}", style = MaterialTheme.typography.bodySmall)
                                     Text("JODI research: ${jodi.take(5).joinToString("  ·  ") { "${it.jodi} (index ${"%.1f".format(it.score)})" }.ifBlank { "Not enough paired evidence" }}", style = MaterialTheme.typography.bodyMedium)
+                                    Text("HALF SANGAM research: ${sangam?.halfSangam?.take(5)?.joinToString("  ·  ") { "${it.label} (index ${"%.1f".format(it.score)}, pairs ${it.supportingPairs})" }?.ifBlank { "Not enough evidence — abstain" } ?: "Not enough evidence — abstain"}", style = MaterialTheme.typography.bodySmall)
+                                    Text("FULL SANGAM research: ${sangam?.fullSangam?.take(5)?.joinToString("  ·  ") { "${it.label} (index ${"%.1f".format(it.score)}, pairs ${it.supportingPairs})" }?.ifBlank { "Not enough evidence — abstain" } ?: "Not enough evidence — abstain"}", style = MaterialTheme.typography.bodySmall)
                                 }
                                 Text(
                                     pattern?.let { "Pattern cross-check: ${it.acceptedRecords} usable rows · Open family ${it.openFamilySequences.take(2).joinToString { p -> "${p.pattern} (${p.count})" }.ifBlank { "not enough history" }} · Close family ${it.closeFamilySequences.take(2).joinToString { p -> "${p.pattern} (${p.count})" }.ifBlank { "not enough history" }}" }
