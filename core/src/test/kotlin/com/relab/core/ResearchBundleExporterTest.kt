@@ -24,9 +24,19 @@ class ResearchBundleExporterTest {
             normalizedResult = "577-99-667",
             status = ObservationStatus.PUBLISHED
         )
+        val prediction = LockedSidePrediction(
+            Market.SRIDEVI, "main", LocalDate.parse("2026-11-17"), PannaSide.OPEN,
+            listOf("123", "456"), 8, Instant.parse("2026-11-17T11:00:00Z"), "frozen fixture"
+        )
+        val attempt = PredictionVerification(
+            prediction.id, PredictionGrade.GREY, null, null, null,
+            Instant.parse("2026-11-17T12:00:00Z"), ReconciliationState.SINGLE_SOURCE_UNVERIFIED,
+            "Awaiting independent publisher.", 1
+        )
+        val ledger = PredictionLearningLedger(listOf(prediction), listOf(attempt))
         val bytes = ResearchBundleExporter.export(
             listOf(observation), emptyList(), emptyList(), emptyList(),
-            Instant.parse("2026-11-17T12:00:00Z")
+            Instant.parse("2026-11-17T12:00:00Z"), ledger
         )
         val entries = linkedMapOf<String, ByteArray>()
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
@@ -40,7 +50,7 @@ class ResearchBundleExporterTest {
         assertTrue(entries.keys.containsAll(listOf(
             "source-observations.csv", "derived-consensus-research.csv",
             "walk-forward-audit.csv", "historical-coverage-audit.csv",
-            "source-publication-timing.csv", "research-manifest.json",
+            "source-publication-timing.csv", "prediction-learning-ledger.csv", "research-manifest.json",
             "README.txt", "bundle-index.json"
         )))
         val ledger = String(entries.getValue("source-observations.csv"), Charsets.UTF_8)
@@ -48,6 +58,11 @@ class ResearchBundleExporterTest {
         assertTrue(ledger.contains("577-99-667"))
         val manifest = String(entries.getValue("research-manifest.json"), Charsets.UTF_8)
         assertTrue(manifest.contains("source_ledger_sha256"))
+        val restoredLedger = PredictionLedgerCsvCodec.import(
+            String(entries.getValue("prediction-learning-ledger.csv"), Charsets.UTF_8)
+        )
+        assertEquals(ledger, restoredLedger)
+        assertTrue(String(entries.getValue("README.txt"), Charsets.UTF_8).contains("Locked predictions: 1"))
         val index = String(entries.getValue("bundle-index.json"), Charsets.UTF_8)
         val expectedHash = MessageDigest.getInstance("SHA-256")
             .digest(entries.getValue("source-observations.csv"))
