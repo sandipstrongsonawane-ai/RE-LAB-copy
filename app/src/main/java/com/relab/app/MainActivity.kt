@@ -926,6 +926,11 @@ private fun RelabHome(
                         MarketNextInsightCard(market, sessionId, rows, candidate?.first, candidate?.second, candidate?.third.orEmpty(),
                             observations.filter { it.market == market && it.sessionId == sessionId }.maxOfOrNull { it.retrievedAt },
                             rows.maxOfOrNull { it.date })
+                        HomeReverseEngineeringCard(
+                            analysis = patternAnalyses.firstOrNull { it.market == market && it.sessionId == sessionId },
+                            intelligence = intelligenceReports.firstOrNull { it.market == market && it.sessionId == sessionId },
+                            hypotheses = selfLearningReports.filter { it.market == market && it.sessionId == sessionId }
+                        )
                     }
                 }
                 if (activeSection == "research") {
@@ -1249,6 +1254,80 @@ private fun MarketNextInsightCard(
                 Text("Jodi rank: ${jodi.take(3).joinToString { "${it.jodi} (${"%.1f".format(it.score)})" }}")
             } else Text(open?.note ?: "Candidate ranking unavailable until source history arrives.", style = MaterialTheme.typography.bodySmall)
             Text("Historical share = matching rows ÷ eligible rows. Descriptive evidence only, not a calibrated future chance. See Research and Audit for backtests, missing dates, publisher coverage and conflicts.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+
+@Composable
+private fun HomeReverseEngineeringCard(
+    analysis: MarketAnalysis?,
+    intelligence: com.relab.core.MarketIntelligenceReport?,
+    hypotheses: List<com.relab.core.HypothesisDiscoveryReport>
+) {
+    if (analysis == null) return
+    fun topCounts(items: List<com.relab.core.PatternCount>, limit: Int = 3): String =
+        items.take(limit).joinToString(" · ") { "${it.pattern} ×${it.count} (${"%.1f".format(it.percentage)}%)" }
+            .ifBlank { "Abhi enough evidence nahi" }
+    fun topPositions(items: List<Map<Int, Int>>): String =
+        items.mapIndexed { index, values ->
+            val top = values.entries.sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key })
+                .take(2).joinToString("/") { "${it.key}:${it.value}" }
+            "P${index + 1} $top"
+        }.joinToString(" · ")
+    fun topWeekday(values: Map<java.time.DayOfWeek, Int>): String =
+        values.entries.sortedWith(compareByDescending<Map.Entry<java.time.DayOfWeek, Int>> { it.value }.thenBy { it.key.value })
+            .take(3).joinToString(" · ") { "${it.key.name.lowercase().replaceFirstChar(Char::uppercase)} ${it.value}" }
+            .ifBlank { "No weekday evidence" }
+    fun typeSummary(values: Map<com.relab.core.PannaType, Int>): String =
+        values.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+            .joinToString(" · ") { "${it.key.name}: ${it.value}" }.ifBlank { "No type evidence" }
+    fun gapSummary(values: List<com.relab.core.RepeatGap>): String {
+        val samples = values.flatMap { it.gapsInDays }
+        if (samples.isEmpty()) return "Repeat gap samples abhi nahi"
+        val avg = samples.average()
+        val shortest = samples.minOrNull()
+        val longest = samples.maxOrNull()
+        return "${samples.size} gaps · average ${"%.1f".format(avg)} days · range ${shortest}–${longest} days"
+    }
+    val bestHypotheses = hypotheses.flatMap { it.hypotheses }
+        .sortedWith(compareByDescending<com.relab.core.DiscoveredHypothesis> { it.liftOverBaseline }
+            .thenByDescending { it.evaluated }.thenByDescending { it.support })
+        .take(2)
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text("REVERSE-ENGINEERING RESEARCH · ${analysis.market} / ${analysis.sessionId}", style = MaterialTheme.typography.titleMedium)
+            Text("Dataset: ${analysis.acceptedRecords} valid rows · ${analysis.rejectedRecords} rejected", style = MaterialTheme.typography.bodySmall)
+            Text("1) Family transition · Open: ${topCounts(analysis.openFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
+            Text("   Close: ${topCounts(analysis.closeFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
+            Text("2) Weekday pattern · ${topWeekday(analysis.openWeekdayCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text("3) Ank frequency · Open: ${topCounts(analysis.openAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
+            Text("   Close: ${topCounts(analysis.closeAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
+            Text("4) Panna type · Open: ${typeSummary(analysis.openPannaTypeCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text("   Close: ${typeSummary(analysis.closePannaTypeCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text("5) Reverse panna · Open: ${topCounts(analysis.openReversePannaCounts, 3)}", style = MaterialTheme.typography.bodySmall)
+            Text("   Close: ${topCounts(analysis.closeReversePannaCounts, 3)}", style = MaterialTheme.typography.bodySmall)
+            Text("6) Digit position · Open: ${topPositions(analysis.openDigitPositionCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text("   Close: ${topPositions(analysis.closeDigitPositionCounts)}", style = MaterialTheme.typography.bodySmall)
+            Text("7) Digit pairs · Open: ${analysis.openDigitPairPositionCounts.mapIndexed { i, xs -> "P${i + 1}: ${xs.take(2).joinToString("/") { it.pattern + "×" + it.count }}" }.joinToString(" · ")}", style = MaterialTheme.typography.bodySmall)
+            Text("8) Repeat gap · Open: ${gapSummary(analysis.openRepeatGaps)}", style = MaterialTheme.typography.bodySmall)
+            Text("   Close: ${gapSummary(analysis.closeRepeatGaps)}", style = MaterialTheme.typography.bodySmall)
+            if (intelligence != null) {
+                val shift = intelligence.distributionShift?.let { "${"%.3f".format(it)} (window=${intelligence.comparisonWindowSize})" } ?: "Insufficient history"
+                Text("9) Entropy · Open ${"%.2f".format(intelligence.openFamilyEntropyBits)} bits · Close ${"%.2f".format(intelligence.closeFamilyEntropyBits)} bits", style = MaterialTheme.typography.bodySmall)
+                Text("10) Pattern shift · ${intelligence.regime} · index $shift", style = MaterialTheme.typography.bodySmall)
+                Text(intelligence.explanation, style = MaterialTheme.typography.labelSmall)
+            } else {
+                Text("9–10) Entropy / pattern shift: more historical rows required", style = MaterialTheme.typography.bodySmall)
+            }
+            Text("11) Self-learning hypotheses", style = MaterialTheme.typography.titleSmall)
+            if (bestHypotheses.isEmpty()) {
+                Text("Abhi koi rule minimum support + walk-forward evaluation pass nahi kar paya.", style = MaterialTheme.typography.bodySmall)
+            } else bestHypotheses.forEach { rule ->
+                Text("${rule.side} · ${rule.condition} → ${"%.1f".format(rule.hitRate * 100)}% (${rule.correct}/${rule.evaluated}) · baseline ${"%.1f".format(rule.baselineHitRate * 100)}% · lift ${"%+.1f".format(rule.liftOverBaseline * 100)} pp · support ${rule.support}", style = MaterialTheme.typography.bodySmall)
+            }
+            Text("Walk-forward baseline · Open global ${"%.1f".format(analysis.globalModeBaseline.hitRate * 100)}% / weekday ${"%.1f".format(analysis.weekdayModeBaseline.hitRate * 100)}% / previous ${"%.1f".format(analysis.previousStateBaseline.hitRate * 100)}% · n=${analysis.globalModeBaseline.evaluated}", style = MaterialTheme.typography.bodySmall)
+            Text("Ye historical evidence hai, future result ki guarantee/probability nahi. Kam sample ya source conflict mein engine abstain karega.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
