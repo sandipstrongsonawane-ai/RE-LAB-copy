@@ -54,6 +54,7 @@ import java.time.LocalDate
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.File
 import java.util.zip.ZipInputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -240,6 +241,31 @@ private fun RelabHome(
     var initialDataLoaded by remember { mutableStateOf(false) }
 
     var importMessage by remember { mutableStateOf<String?>(null) }
+    var apkAnalysisReport by remember { mutableStateOf<com.relab.apkanalysis.ApkAnalysisReport?>(null) }
+    var apkAnalysisMessage by remember { mutableStateOf<String?>(null) }
+    val apkPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            apkAnalysisMessage = "APK analysis running in background…"
+            Thread {
+                var temporaryApk: File? = null
+                val result = runCatching {
+                    temporaryApk = File.createTempFile("relab-apk-", ".apk", context.cacheDir)
+                    val input = context.contentResolver.openInputStream(uri) ?: error("Selected APK could not be opened")
+                    input.use { source -> temporaryApk!!.outputStream().use { destination -> source.copyTo(destination) } }
+                    com.relab.apkanalysis.ApkAnalyzer().analyze(temporaryApk!!)
+                }
+                temporaryApk?.delete()
+                Handler(Looper.getMainLooper()).post {
+                    result.onSuccess {
+                        apkAnalysisReport = it
+                        apkAnalysisMessage = "Analysis complete · ${it.archiveEntryCount} archive entries"
+                    }.onFailure {
+                        apkAnalysisMessage = "APK analysis failed: ${it.message ?: it.javaClass.simpleName}"
+                    }
+                }
+            }.start()
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -564,6 +590,7 @@ private fun RelabHome(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(
                         "research" to uiText(uiLanguage, "Research", "रिसर्च", "संशोधन"),
+                        "apk" to uiText(uiLanguage, "APK Lab", "APK लैब", "APK लॅब"),
                         "audit" to uiText(uiLanguage, "Audit", "ऑडिट", "तपासणी"),
                         "settings" to uiText(uiLanguage, "Settings", "सेटिंग", "सेटिंग")
                     ).forEach { (key, label) ->
@@ -957,6 +984,34 @@ private fun RelabHome(
                         enabled = sourceTiming.isNotEmpty()
                     ) { Text(uiText(uiLanguage, "Export source timing CSV", "सोर्स टाइमिंग CSV एक्सपोर्ट", "स्रोत वेळ CSV एक्सपोर्ट")) }
                 }
+                }
+
+                if (activeSection == "apk") {
+                    Text("APK Reverse Engineering · Static Analysis", style = MaterialTheme.typography.titleLarge)
+                    Text("Offline read-only inspection. The selected APK is copied to a temporary cache file, analyzed without execution, then the temporary copy is deleted.", style = MaterialTheme.typography.bodySmall)
+                    Button(onClick = { apkPicker.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream")) }) {
+                        Text("Select APK and analyze")
+                    }
+                    apkAnalysisMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    apkAnalysisReport?.let { report ->
+                        Card(colors = CardDefaults.cardColors()) {
+                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(report.fileName, style = MaterialTheme.typography.titleMedium)
+                                Text("Package: ${report.packageName ?: "Not decoded"}")
+                                Text("Version: ${report.versionName ?: "Unknown"} · Code: ${report.versionCode ?: "Unknown"}")
+                                Text("APK size: ${report.apkSizeBytes} bytes · ZIP entries: ${report.archiveEntryCount} · Expanded: ${report.uncompressedBytes} bytes")
+                                Text("Manifest: ${report.manifestFormat} · DEX: ${report.dexFiles.size} (${report.dexVersions.joinToString().ifBlank { "not identified" }})")
+                                Text("Native ABIs: ${report.nativeLibraries.keys.joinToString().ifBlank { "none found" }}")
+                                Text("Resources: ${report.resourceEntryCount}")
+                                Text("Permissions (${report.permissions.size})", style = MaterialTheme.typography.titleSmall)
+                                report.permissions.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                                Text("Components (${report.components.size})", style = MaterialTheme.typography.titleSmall)
+                                report.components.forEach { Text("• ${it.type}: ${it.name} · exported=${it.exported ?: "unspecified"}", style = MaterialTheme.typography.bodySmall) }
+                                Text("Analysis limits", style = MaterialTheme.typography.titleSmall)
+                                report.warnings.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                            }
+                        }
+                    }
                 }
                 if (activeSection == "home") {
                 Card(colors = CardDefaults.cardColors()) {
