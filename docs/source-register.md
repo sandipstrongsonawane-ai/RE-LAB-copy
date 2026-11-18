@@ -53,3 +53,15 @@ These additional pages surfaced during historical-coverage research. They are re
 | `ratan567official` | Kalyan / main | https://ratan567official.com/kalyan/pana-chart/ | Page excerpt reports 303 dated results from 24 Sep 2025 to 23 Sep 2026. | Capture raw HTML; confirm Kalyan evening session identity and test calendar/missing-cell behavior. |
 
 Do not count these candidates toward independent-source consensus or historical coverage until their raw snapshots are imported. Different domains are treated as different publisher IDs provisionally; common ownership or mirrored content must be investigated before counting corroboration.
+
+## Archive-format discoveries — 18 Nov 2026
+
+Fresh indexed page excerpts expose additional source layouts:
+
+- Dlbosss Sridevi: numeric `DD/MM/YYYY to DD/MM/YYYY` weekly ranges and seven day columns, with digit groups separated by spaces.
+- RealMatka Sridevi: month-name ranges such as `2024 DEC 30 to JAN 05`, seven day columns, and dash markers (`--------`) for missing entries.
+- Ratan567 Kalyan: ISO date ranges such as `2025-09-22 To 2025-09-28`, seven day columns, and explicit star markers on non-result days.
+
+The offline extractor now recognizes ISO and month-name date ranges, infers the next year only when a yearless end-date crosses December, preserves dash/star-only cells as `MISSING_FROM_SOURCE`, and accepts seven-column Kalyan boards while retaining the explicit Sunday marker. Parser fixtures exercise these formats.
+
+These are parser-format discoveries from indexed text, **not raw HTML snapshot captures**. The three sources remain disabled pending byte-preserved snapshots, manifest SHA-256 audit, source-identity/mirroring checks, and full extraction/reconciliation.
