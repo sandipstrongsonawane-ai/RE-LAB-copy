@@ -80,14 +80,35 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
 
             matrix.dayColumns.forEachIndexed { dayOffset, (columnIndex, weekday) ->
                 val date = start.plusDays(dayOffset.toLong())
-                if (date.dayOfWeek.value != weekday || date.isAfter(end) ||
-                    date.dayOfWeek.value !in market.activeDays.map { it.value }) {
+                if (date.dayOfWeek.value != weekday || date.isAfter(end)) {
                     return@forEachIndexed
                 }
                 val cell = cells[columnIndex]
                 val compact = cell.replace(Regex("\\s+"), "")
                 val raw = "${cells[matrix.dateIndex]} | ${weekdayAliases.entries.first { it.value == weekday }.key} | $cell"
                 val cleaned = compact.trim('*')
+                if (date.dayOfWeek !in market.activeDays) {
+                    val outsideStatus = when {
+                        compact.isBlank() || cleaned.isBlank() || cleaned.matches(Regex("[-—–]+")) ->
+                            ObservationStatus.MISSING_FROM_SOURCE
+                        cleaned.equals("holiday", true) || cleaned.equals("closed", true) ->
+                            ObservationStatus.HOLIDAY_CLOSED
+                        cleaned.equals("pending", true) || cleaned.equals("waiting", true) || compact.contains("*") ->
+                            ObservationStatus.PENDING
+                        normalizeResult(cleaned) != null -> ObservationStatus.OUTSIDE_MARKET_CALENDAR
+                        else -> ObservationStatus.MALFORMED
+                    }
+                    observations += SourceObservation(
+                        market = market, sessionId = sessionId, date = date,
+                        sourceId = sourceId, sourceUrl = pageUrl, sourceRecordId = date.toString(),
+                        retrievedAt = retrievedAt, rawText = raw,
+                        normalizedResult = null, status = outsideStatus
+                    )
+                    if (outsideStatus == ObservationStatus.OUTSIDE_MARKET_CALENDAR) {
+                        issues += "Weekly row ${rowIndex + 2}, weekday column $weekday: result retained for review because this date is outside the configured market calendar"
+                    }
+                    return@forEachIndexed
+                }
                 val statusAndResult = when {
                     compact.isBlank() || cleaned.isBlank() || cleaned.matches(Regex("[-—–]+")) ->
                         ObservationStatus.MISSING_FROM_SOURCE to null

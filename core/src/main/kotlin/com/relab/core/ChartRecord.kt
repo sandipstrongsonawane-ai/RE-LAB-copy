@@ -3,7 +3,7 @@ package com.relab.core
 enum class Market(val activeDays: Set<java.time.DayOfWeek>) {
     SRIDEVI(java.time.DayOfWeek.entries.toSet()),
     SRIDEVI_NIGHT(java.time.DayOfWeek.entries.toSet()),
-    KALYAN(java.time.DayOfWeek.entries.toSet()),
+    KALYAN(java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet()),
     TIME_BAZAR(java.time.DayOfWeek.entries.toSet()),
     MAIN_BAZAR(setOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY)),
     // Additional named markets are explicit identities; do not collapse them into a generic bucket.

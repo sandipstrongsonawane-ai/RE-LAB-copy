@@ -8,7 +8,9 @@ enum class ObservationStatus {
     PENDING,
     HOLIDAY_CLOSED,
     MISSING_FROM_SOURCE,
-    MALFORMED
+    MALFORMED,
+    /** Source supplied a result on a date excluded by the configured market calendar. */
+    OUTSIDE_MARKET_CALENDAR
 }
 
 data class SourceObservation(

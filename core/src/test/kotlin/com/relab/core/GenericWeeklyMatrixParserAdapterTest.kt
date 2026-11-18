@@ -164,7 +164,9 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertEquals(ObservationStatus.HOLIDAY_CLOSED, saturday.status)
         val sunday = parsed.observations.single { it.date == LocalDate.parse("2026-11-15") }
         assertEquals("390-24-257", sunday.normalizedResult)
-        assertEquals(ObservationStatus.PUBLISHED, sunday.status)
+        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, sunday.status)
+        assertNull(sunday.normalizedResult)
+        assertTrue(sunday.rawText.contains("390-24-257"))
     }
 
     @Test fun preservesRepeatedDateRowsSoConflictingPublisherValuesAreNotSilentlyDiscarded() {
