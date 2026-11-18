@@ -65,6 +65,27 @@ class HtmlChartImporterTest {
         assertEquals("367-69-289", report.observations[2].normalizedResult)
     }
 
+    @Test fun importsSingleCellPerDayWeeklyMatrixAndKeepsMarkersUnpublished() {
+        val html = """
+            <table>
+              <tr><th>Date</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th></tr>
+              <tr><td>16/11/26 to 22/11/26</td>
+                <td>4 6 0 09 2 8 9</td><td>4 5 0 92 2 4 6</td>
+                <td>1 8 9 83 6 8 9</td><td>1 5 5 14 6 8 0</td>
+                <td>2 9 9 00 4 7 9</td><td>Pending</td><td>********</td>
+              </tr>
+            </table>
+        """.trimIndent()
+        val report = HtmlChartImporter.import(html, url, Market.SRIDEVI, "main", retrieved)
+        assertEquals(7, report.observations.size)
+        assertEquals("460-09-289", report.observations[0].normalizedResult)
+        assertEquals("450-92-246", report.observations[1].normalizedResult)
+        assertEquals(ObservationStatus.PENDING, report.observations[5].status)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, report.observations[6].status)
+        assertEquals("********", report.observations[6].rawText)
+        assertEquals(2, report.observations.count { it.status != ObservationStatus.PUBLISHED })
+    }
+
     @Test fun extractsKalyanSixDayWeeklyPanelWithoutTreatingSundayAsTradingDay() {
         val html = """
             <table>
