@@ -108,6 +108,28 @@ object ResearchBundleValidator {
         } else {
             errors += "Missing bundle index"
         }
+
+        // A matching checksum proves byte integrity, not that the CSV records are importable.
+        // Validate semantic content here so the app never starts a partial restore.
+        if (errors.isEmpty()) {
+            val sourceCsv = String(entries.getValue("source-observations.csv"), Charsets.UTF_8)
+            val sourceReport = runCatching { SourceCsvImporter.import(sourceCsv) }
+                .getOrElse { error ->
+                    errors += "Invalid source-observations.csv: ${error.message ?: "parse error"}"
+                    null
+                }
+            if (sourceReport != null && sourceReport.issues.isNotEmpty()) {
+                val details = sourceReport.issues.take(5).joinToString("; ") {
+                    "row ${it.rowNumber}: ${it.message}"
+                }
+                errors += "Source observations contain invalid rows: $details"
+            }
+
+            val ledgerCsv = String(entries.getValue("prediction-learning-ledger.csv"), Charsets.UTF_8)
+            runCatching { PredictionLedgerCsvCodec.import(ledgerCsv) }.onFailure { error ->
+                errors += "Invalid prediction-learning-ledger.csv: ${error.message ?: "parse error"}"
+            }
+        }
         return BundleValidationResult(errors.isEmpty(), verified, errors)
     }
 
