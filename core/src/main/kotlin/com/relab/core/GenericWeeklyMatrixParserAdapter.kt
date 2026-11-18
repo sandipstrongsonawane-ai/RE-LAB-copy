@@ -31,7 +31,7 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
         DateTimeFormatter.ISO_LOCAL_DATE
     )
 
-    private data class Matrix(val table: org.jsoup.nodes.Element, val dateIndex: Int, val dayColumns: List<Pair<Int, Int>>)
+    private data class Matrix(val table: org.jsoup.nodes.Element, val dateIndex: Int, val dayColumns: List<Pair<Int, Int>>, val weekAnchor: Boolean)
 
     override fun supports(html: String, pageUrl: String): Boolean =
         runCatching { findMatrix(Jsoup.parse(html, pageUrl)) != null }.getOrDefault(false)
@@ -59,7 +59,7 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
                 issues += "Weekly row ${rowIndex + 2}: missing date-range or weekday cells"
                 return@forEachIndexed
             }
-            val range = parseRange(cells[matrix.dateIndex])
+            val range = parseRange(cells[matrix.dateIndex], matrix.weekAnchor)
             if (range == null) {
                 skipped++
                 issues += "Weekly row ${rowIndex + 2}: unsupported date range '${cells[matrix.dateIndex]}'"
@@ -140,12 +140,21 @@ object GenericWeeklyMatrixParserAdapter : ChartParserAdapter {
                 (0 until days.size).map { ((days.first().second - 1 + it) % 7) + 1 }
             if (days.size in 5..7 && days.map { it.second }.distinct().size == days.size &&
                 days.map { it.second } == cyclicWeekdays
-            ) return Matrix(table, dateIndex, days)
+            ) return Matrix(table, dateIndex, days, labels[dateIndex] == "week")
         }
         return null
     }
 
-    private fun parseRange(value: String): Pair<LocalDate, LocalDate>? {
+    private fun parseRange(value: String, weekAnchor: Boolean): Pair<LocalDate, LocalDate>? {
+        // Some public archives label the first column "Week" and store only
+        // the Monday date, with the seven weekday cells carrying the full week.
+        if (weekAnchor) {
+            val anchor = runCatching {
+                LocalDate.parse(value.trim(), DateTimeFormatter.ofPattern("d MMM uuuu", Locale.ENGLISH))
+            }.getOrNull()
+            if (anchor != null) return if (anchor.dayOfWeek == java.time.DayOfWeek.MONDAY)
+                anchor to anchor.plusDays(6) else null
+        }
         // Supports publisher variants such as:
         // 29/12/25TO04/01/26, 16-11-2026 to 22-11-2026,
         // and 16/11 to 22/11 2026 (year printed only once).
