@@ -16,7 +16,8 @@ data class SourceRefreshOutcome(
     val observations: List<SourceObservation>,
     val skippedRows: Int,
     val issues: List<String>,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val snapshots: List<SourcePageSnapshot> = emptyList()
 ) {
     val succeeded: Boolean get() = errorMessage == null
 }
@@ -67,19 +68,35 @@ object MarketSourceRefreshEngine {
                         val page = fetched.getOrThrow()
                         indexedSources.groupBy { it.value.market to it.value.sessionId }.values.forEach { registrations ->
                             val first = registrations.first()
-                            val parsed = refreshParsed(first.value, page, retrievedAt)
+                            val capturedAt = retrievedAt()
                             registrations.forEach { indexed ->
                                 val source = indexed.value
-                                outcomesByIndex[indexed.index] = if (indexed.index == first.index) {
-                                    parsed
+                                val snapshot = SourcePageSnapshot(
+                                    sourceId = source.sourceId,
+                                    market = source.market,
+                                    sessionId = source.sessionId,
+                                    requestedUrl = source.url,
+                                    finalUrl = page.finalUrl,
+                                    retrievedAt = capturedAt,
+                                    html = page.html
+                                )
+                                val parsed = if (indexed.index == first.index) {
+                                    refreshParsed(first.value, page, capturedAt, snapshot)
                                 } else {
-                                    parsed.copy(
+                                    val base = outcomesByIndex[first.index]
+                                        ?: refreshParsed(first.value, page, capturedAt, SourcePageSnapshot(
+                                            first.value.sourceId, first.value.market, first.value.sessionId,
+                                            first.value.url, page.finalUrl, capturedAt, page.html
+                                        ))
+                                    base.copy(
                                         source = source,
-                                        observations = parsed.observations.map {
+                                        observations = base.observations.map {
                                             it.copy(sourceId = source.sourceId, sourceUrl = source.url)
-                                        }
+                                        },
+                                        snapshots = listOf(snapshot)
                                     )
                                 }
+                                outcomesByIndex[indexed.index] = parsed
                             }
                         }
                     } else {
@@ -106,7 +123,8 @@ object MarketSourceRefreshEngine {
     private fun refreshParsed(
         source: MarketSource,
         page: FetchedChartPage,
-        retrievedAt: () -> Instant
+        retrievedAt: Instant,
+        snapshot: SourcePageSnapshot
     ): SourceRefreshOutcome = try {
         require(source.enabled) { "Source is disabled pending identity verification." }
         val uri = URI(page.finalUrl)
@@ -120,7 +138,7 @@ object MarketSourceRefreshEngine {
         }
         val imported = ChartParserRegistry.parse(
             html = page.html, pageUrl = page.finalUrl, market = source.market,
-            sessionId = source.sessionId, retrievedAt = retrievedAt()
+            sessionId = source.sessionId, retrievedAt = retrievedAt
         )
         require(imported.observations.isNotEmpty()) {
             "UNSUPPORTED: no recognized dated chart rows were found by parser '${imported.parserId}'. Page may need a site-specific adapter."
@@ -128,10 +146,14 @@ object MarketSourceRefreshEngine {
         SourceRefreshOutcome(
             source = source,
             observations = imported.observations.map { it.copy(sourceId = source.sourceId, sourceUrl = source.url) },
-            skippedRows = imported.skippedRows, issues = imported.issues
+            skippedRows = imported.skippedRows, issues = imported.issues,
+            snapshots = listOf(snapshot)
         )
     } catch (error: Exception) {
-        SourceRefreshOutcome(source, emptyList(), 0, emptyList(), error.message ?: error.javaClass.simpleName)
+        SourceRefreshOutcome(
+            source, emptyList(), 0, emptyList(),
+            error.message ?: error.javaClass.simpleName, listOf(snapshot)
+        )
     }
 
     private const val MAX_PARALLEL_SOURCES = 4

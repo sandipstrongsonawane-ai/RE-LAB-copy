@@ -114,6 +114,25 @@ class ResearchBundleValidatorTest {
         assertTrue(result.errors.any { it.contains("Malformed bundle index") })
     }
 
+    @Test
+    fun acceptsAndVerifiesRawHtmlSnapshotArtifacts() {
+        val snapshot = SourcePageSnapshot(
+            sourceId = "publisher-a", market = Market.SRIDEVI, sessionId = "night",
+            requestedUrl = "https://publisher.example/night",
+            finalUrl = "https://publisher.example/night",
+            retrievedAt = Instant.parse("2026-11-18T03:00:00Z"),
+            html = "<html>raw chart page</html>"
+        )
+        val bytes = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-18T04:00:00Z"),
+            sourceSnapshots = listOf(snapshot)
+        )
+        val result = ResearchBundleValidator.validate(bytes)
+        assertTrue(result.errors.joinToString(), result.valid)
+        assertEquals(16, result.verifiedFiles)
+    }
+
     private fun unzip(bytes: ByteArray): Map<String, ByteArray> {
         val entries = linkedMapOf<String, ByteArray>()
         java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->

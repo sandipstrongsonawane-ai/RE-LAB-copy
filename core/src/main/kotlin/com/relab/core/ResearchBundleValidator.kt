@@ -53,7 +53,8 @@ object ResearchBundleValidator {
                     val entry = zip.nextEntry ?: break
                     val name = entry.name
                     if (entry.isDirectory || name.startsWith("/") || name.split('/').any { it == ".." } ||
-                        name.contains('\\') || name !in requiredFiles) {
+                        name.contains('\\') || !(name in requiredFiles || name == "source-page-snapshots.csv" ||
+                            Regex("""source-snapshots/[0-9]{6}_[a-f0-9]{64}\.html""").matches(name))) {
                         errors += "Unsupported or unsafe ZIP entry: $name"
                         zip.closeEntry()
                         continue
@@ -99,9 +100,21 @@ object ResearchBundleValidator {
                 if (indexedNames.size != indexedNames.distinct().size) {
                     errors += "Duplicate artifact in bundle index"
                 }
-                val expectedNames = requiredFiles - "bundle-index.json"
-                if (indexedNames.toSet() != expectedNames) {
-                    errors += "Bundle index does not list exactly the required artifacts"
+                val expectedNames = entries.keys - "bundle-index.json"
+                if (!indexedNames.toSet().containsAll(requiredFiles - "bundle-index.json") ||
+                    indexedNames.toSet() != expectedNames) {
+                    errors += "Bundle index does not list exactly the required and optional artifacts"
+                }
+                val snapshotFiles = entries.keys.filter { it.startsWith("source-snapshots/") }
+                val snapshotManifest = entries["source-page-snapshots.csv"]
+                if (snapshotFiles.isEmpty() != (snapshotManifest == null)) {
+                    errors += "Raw snapshot files and source-page-snapshots.csv must be present together"
+                } else if (snapshotManifest != null) {
+                    val manifest = String(snapshotManifest, Charsets.UTF_8)
+                    if (!manifest.startsWith("source_id,market,session_id,requested_url,final_url,retrieved_at,html_file,sha256,utf8_bytes\\n") ||
+                        snapshotFiles.any { file -> !manifest.contains(file) }) {
+                        errors += "Raw snapshot manifest is malformed or omits an HTML snapshot"
+                    }
                 }
                 parsedArtifacts.forEach { artifact ->
                     val bytes = entries[artifact.name]

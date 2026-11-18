@@ -103,4 +103,41 @@ class ResearchBundleExporterTest {
         assertTrue(json.contains("row-"))
         assertTrue(json.contains("123-45-678"))
     }
+    @Test
+    fun bundleExportsExactRawHtmlSnapshotsAndManifestProvenance() {
+        val html = "<html><table><tr><td>2026-11-16</td><td>012-07-000</td></tr></table></html>"
+        val snapshot = SourcePageSnapshot(
+            sourceId = "publisher-a",
+            market = Market.SRIDEVI,
+            sessionId = "night",
+            requestedUrl = "https://publisher.example/night",
+            finalUrl = "https://publisher.example/night?view=full",
+            retrievedAt = Instant.parse("2026-11-18T03:00:00Z"),
+            html = html
+        )
+        val bytes = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-18T04:00:00Z"),
+            sourceSnapshots = listOf(snapshot)
+        )
+        val entries = linkedMapOf<String, ByteArray>()
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                entries[entry.name] = zip.readBytes()
+                zip.closeEntry()
+            }
+        }
+        val htmlPath = entries.keys.single { it.startsWith("source-snapshots/") }
+        assertEquals(html, String(entries.getValue(htmlPath), Charsets.UTF_8))
+        val manifest = String(entries.getValue("source-page-snapshots.csv"), Charsets.UTF_8)
+        assertTrue(manifest.contains("publisher-a"))
+        assertTrue(manifest.contains("night"))
+        assertTrue(manifest.contains(snapshot.requestedUrl))
+        assertTrue(manifest.contains(snapshot.finalUrl))
+        assertTrue(manifest.contains(snapshot.retrievedAt.toString()))
+        assertTrue(manifest.contains(snapshot.sha256))
+        assertTrue(manifest.contains(htmlPath))
+    }
+
 }

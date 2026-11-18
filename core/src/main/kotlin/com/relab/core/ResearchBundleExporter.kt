@@ -27,7 +27,8 @@ object ResearchBundleExporter {
         selfLearningReports: List<HypothesisDiscoveryReport> = emptyList(),
         publisherCoverageReports: List<PublisherCoverageReport> = emptyList(),
         repeatedSourceRecords: List<DuplicateObservationGroup> = emptyList(),
-        repeatedPublishedResults: List<RepeatedPublishedResultGroup> = emptyList()
+        repeatedPublishedResults: List<RepeatedPublishedResultGroup> = emptyList(),
+        sourceSnapshots: List<SourcePageSnapshot> = emptyList()
     ): ByteArray {
         val artifacts = linkedMapOf(
             "source-observations.csv" to SourceCsvExporter.export(observations),
@@ -45,6 +46,21 @@ object ResearchBundleExporter {
             "research-manifest.json" to ResearchManifestExporter.export(observations, consensusRecords, analyses, generatedAt),
             "README.txt" to readme(observations, consensusRecords, analyses, coverageReports, generatedAt, predictionLedger)
         )
+        if (sourceSnapshots.isNotEmpty()) {
+            val snapshotRows = buildString {
+                appendLine("source_id,market,session_id,requested_url,final_url,retrieved_at,html_file,sha256,utf8_bytes")
+                sourceSnapshots.sortedWith(compareBy<SourcePageSnapshot> { it.retrievedAt }.thenBy { it.sourceId }.thenBy { it.requestedUrl })
+                    .forEachIndexed { index, snapshot ->
+                        val file = "source-snapshots/${(index + 1).toString().padStart(6, '0')}_${snapshot.sha256}.html"
+                        artifacts[file] = snapshot.html
+                        val fields = listOf(snapshot.sourceId, snapshot.market.name, snapshot.sessionId,
+                            snapshot.requestedUrl, snapshot.finalUrl, snapshot.retrievedAt.toString(),
+                            file, snapshot.sha256, snapshot.utf8Bytes.toString())
+                        appendLine(fields.joinToString(",") { value -> "\"${value.replace("\"", "\"\"")}\"" })
+                    }
+            }
+            artifacts["source-page-snapshots.csv"] = snapshotRows
+        }
         val index = buildString {
             appendLine("{")
             appendLine("  \"bundle_format_version\": 2,")
@@ -99,6 +115,7 @@ object ResearchBundleExporter {
         appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")
         appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")
         appendLine("- research-manifest.json: dataset checksum, reconciliation and timing metadata")
+        appendLine("- source-page-snapshots.csv and source-snapshots/*.html: exact fetched publisher HTML with requested/final URL, market/session, retrieval time, SHA-256 and UTF-8 byte size (when captured)")
         appendLine("- bundle-index.json: SHA-256 and byte size for every other artifact")
         appendLine()
         appendLine("Important: single-source and conflicting records are retained in the source ledger but excluded from consensus research.")

@@ -13,6 +13,7 @@ import com.relab.core.PredictionLearningLedger
 import com.relab.core.ReconciliationState
 import com.relab.core.ObservationStatus
 import com.relab.core.SourceObservation
+import com.relab.core.SourcePageSnapshot
 import com.relab.core.SourceObservationMerger
 import java.time.Instant
 import java.time.LocalDate
@@ -56,6 +57,7 @@ class LocalObservationDatabase(context: Context) :
                 "ON $TABLE_OBSERVATIONS(market, session_id, chart_date)"
         )
         createPredictionTables(db)
+        createSnapshotTable(db)
         db.execSQL(
             """
             CREATE TABLE $TABLE_METADATA (
@@ -70,6 +72,9 @@ class LocalObservationDatabase(context: Context) :
         // Schema changes must be additive. Never silently discard a user's history.
         if (oldVersion < 2) {
             createPredictionTables(db)
+        }
+        if (oldVersion < 3) {
+            createSnapshotTable(db)
         }
     }
 
@@ -369,6 +374,62 @@ class LocalObservationDatabase(context: Context) :
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_verification_prediction ON $TABLE_VERIFICATIONS(prediction_id, attempt)")
     }
 
+    /** Persists exact fetched HTML, including pages whose layout the parser cannot read. */
+    fun appendSourceSnapshots(snapshots: List<SourcePageSnapshot>) {
+        if (snapshots.isEmpty()) return
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            snapshots.forEach { snapshot ->
+                val values = ContentValues().apply {
+                    put("source_id", snapshot.sourceId)
+                    put("market", snapshot.market.name)
+                    put("session_id", snapshot.sessionId)
+                    put("requested_url", snapshot.requestedUrl)
+                    put("final_url", snapshot.finalUrl)
+                    put("retrieved_at", snapshot.retrievedAt.toString())
+                    put("sha256", snapshot.sha256)
+                    put("utf8_bytes", snapshot.utf8Bytes)
+                    put("html", snapshot.html)
+                }
+                db.insertWithOnConflict(TABLE_SOURCE_SNAPSHOTS, null, values, SQLiteDatabase.CONFLICT_IGNORE)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun loadSourceSnapshots(): List<SourcePageSnapshot> {
+        val snapshots = mutableListOf<SourcePageSnapshot>()
+        readableDatabase.query(TABLE_SOURCE_SNAPSHOTS,
+            arrayOf("source_id", "market", "session_id", "requested_url", "final_url", "retrieved_at", "html"),
+            null, null, null, null, "retrieved_at ASC, id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                snapshots += SourcePageSnapshot(
+                    sourceId = cursor.getString(0), market = Market.valueOf(cursor.getString(1)),
+                    sessionId = cursor.getString(2), requestedUrl = cursor.getString(3),
+                    finalUrl = cursor.getString(4), retrievedAt = Instant.parse(cursor.getString(5)),
+                    html = cursor.getString(6)
+                )
+            }
+        }
+        return snapshots
+    }
+
+    private fun createSnapshotTable(db: SQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS $TABLE_SOURCE_SNAPSHOTS (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_id TEXT NOT NULL, market TEXT NOT NULL, session_id TEXT NOT NULL,
+                requested_url TEXT NOT NULL, final_url TEXT NOT NULL, retrieved_at TEXT NOT NULL,
+                sha256 TEXT NOT NULL, utf8_bytes INTEGER NOT NULL, html TEXT NOT NULL,
+                UNIQUE(source_id, market, session_id, requested_url, retrieved_at, sha256)
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_source_snapshots_partition ON $TABLE_SOURCE_SNAPSHOTS(market, session_id, retrieved_at)")
+    }
     fun loadOriginalCsv(): String? = readMetadata(KEY_SOURCE_CSV)
 
     fun clearDataset() {
@@ -376,6 +437,7 @@ class LocalObservationDatabase(context: Context) :
         database.beginTransaction()
         try {
             database.delete(TABLE_OBSERVATIONS, null, null)
+            database.delete(TABLE_SOURCE_SNAPSHOTS, null, null)
             database.delete(TABLE_METADATA, null, null)
             database.setTransactionSuccessful()
         } finally {
@@ -405,11 +467,12 @@ class LocalObservationDatabase(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "relab_local_history.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
         private const val TABLE_OBSERVATIONS = "source_observations"
         private const val TABLE_METADATA = "app_metadata"
         private const val TABLE_PREDICTIONS = "locked_predictions"
         private const val TABLE_VERIFICATIONS = "prediction_verification_attempts"
+        private const val TABLE_SOURCE_SNAPSHOTS = "source_page_snapshots"
         private const val KEY_SOURCE_CSV = "source_csv"
         private const val KEY_IMPORTED_AT = "imported_at"
     }

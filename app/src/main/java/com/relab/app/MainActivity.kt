@@ -135,7 +135,7 @@ private fun uiText(language: String, hinglish: String, hindi: String, marathi: S
         else -> hinglish
     }
 
-private data class InitialAppData(val csv: String?, val observations: List<com.relab.core.SourceObservation>, val predictionLedger: com.relab.core.PredictionLearningLedger)
+private data class InitialAppData(val csv: String?, val observations: List<com.relab.core.SourceObservation>, val predictionLedger: com.relab.core.PredictionLearningLedger, val sourceSnapshots: List<com.relab.core.SourcePageSnapshot>)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -175,7 +175,7 @@ class MainActivity : ComponentActivity() {
                             preferences.edit().remove("source_csv").apply()
                         }
                     }
-                    InitialAppData(database.loadOriginalCsv(), database.loadObservations(), database.loadPredictionLedger())
+                    InitialAppData(database.loadOriginalCsv(), database.loadObservations(), database.loadPredictionLedger(), database.loadSourceSnapshots())
                 },
                 onSaveLockedPrediction = { database.appendLockedPrediction(it) },
                 onSavePredictionVerification = { database.appendPredictionVerification(it) },
@@ -190,6 +190,7 @@ class MainActivity : ComponentActivity() {
                     require(imported.isNotEmpty()) { "No chart rows were extracted from this link" }
                     database.appendDataset(SourceCsvExporter.export(imported), imported)
                 },
+                onSaveSourceSnapshots = { snapshots -> database.appendSourceSnapshots(snapshots) },
                 onClearCsv = {
                     database.clearDataset()
                     val rangeKeys = preferences.all.keys.filter { it.startsWith(COVERAGE_RANGE_PREFIX) }
@@ -223,6 +224,7 @@ private fun RelabHome(
     onSaveCoverageRange: (String, LocalDate, LocalDate) -> Unit,
     onSaveCsv: (String, List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
     onSaveLinkObservations: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
+    onSaveSourceSnapshots: (List<com.relab.core.SourcePageSnapshot>) -> Unit,
     onClearCsv: () -> Unit
 ) {
     val context = LocalContext.current
@@ -233,6 +235,7 @@ private fun RelabHome(
     var showDatasetDetails by remember { mutableStateOf(false) }
     var rawCsv by remember { mutableStateOf<String?>(null) }
     var observations by remember { mutableStateOf(emptyList<com.relab.core.SourceObservation>()) }
+    var sourceSnapshots by remember { mutableStateOf(emptyList<com.relab.core.SourcePageSnapshot>()) }
     var predictionLedger by remember { mutableStateOf(com.relab.core.PredictionLearningLedger(emptyList(), emptyList())) }
     var initialDataLoaded by remember { mutableStateOf(false) }
 
@@ -243,6 +246,7 @@ private fun RelabHome(
             val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadInitialData() }
             rawCsv = loaded.csv
             observations = loaded.observations
+            sourceSnapshots = loaded.sourceSnapshots
             predictionLedger = loaded.predictionLedger
         } catch (error: Exception) {
             importMessage = "Local data load failed: " + (error.message ?: "Unknown error")
@@ -452,11 +456,12 @@ private fun RelabHome(
                     observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now(), predictionLedger,
                     crossMarketReport, candidateWalkForwardReports, regimeChangeFindings, weekdayPatternFindings,
                     intelligenceReports, candidateSets, sangamResearchSets, sangamWalkForwardReports,
-                    selfLearningReports, publisherCoverageReports, repeatedSourceRecords, repeatedPublishedResults
+                    selfLearningReports, publisherCoverageReports, repeatedSourceRecords, repeatedPublishedResults,
+                    sourceSnapshots = sourceSnapshots
                 )
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bundle) }
                     ?: error("Research bundle file could not be written")
-                importMessage = "Exported complete research bundle: ${observations.size} source observations, ${chartBuild.records.size} consensus records and SHA-256 integrity index."
+                importMessage = "Exported complete research bundle: ${observations.size} source observations, ${sourceSnapshots.size} raw HTML snapshots, ${chartBuild.records.size} consensus records and SHA-256 integrity index."
             } catch (error: Exception) {
                 importMessage = "Research bundle export error: ${error.message ?: "Unknown error"}"
             }
@@ -793,7 +798,12 @@ private fun RelabHome(
                             Button(
                                 enabled = !linkBusy && marketSources.any { it.enabled },
                                 onClick = {
-                                    refreshRegisteredSources(marketSources, onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
+                                    refreshRegisteredSources(marketSources, onSaveLinkObservations, { snapshots ->
+                                        onSaveSourceSnapshots(snapshots)
+                                        sourceSnapshots = (sourceSnapshots + snapshots).distinctBy {
+                                            listOf(it.sourceId, it.market.name, it.sessionId, it.requestedUrl, it.retrievedAt.toString(), it.sha256).joinToString("|")
+                                        }
+                                    }, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
                                 },
                                 modifier = Modifier.weight(1f)
                             ) { Text(if (linkBusy) uiText(uiLanguage, "Refreshing…", "रिफ्रेश हो रहा है…", "रिफ्रेश होत आहे…") else uiText(uiLanguage, "Refresh all sources", "सभी सोर्स रिफ्रेश करें", "सर्व स्रोत रिफ्रेश करा")) }
@@ -1913,6 +1923,7 @@ private fun importChartLink(
 private fun refreshRegisteredSources(
     sources: List<MarketSource>,
     save: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
+    saveSnapshots: (List<com.relab.core.SourcePageSnapshot>) -> Unit,
     updateObservations: (List<com.relab.core.SourceObservation>) -> Unit,
     updateMessage: (String) -> Unit,
     updateBusy: (Boolean) -> Unit,
@@ -1953,6 +1964,9 @@ private fun refreshRegisteredSources(
                 },
                 retrievedAt = { java.time.Instant.now() }
             )
+            // Archive exact HTML before interpreting parser outcomes; unsupported pages are evidence too.
+            val capturedSnapshots = report.outcomes.flatMap { it.snapshots }
+            saveSnapshots(capturedSnapshots)
             // Merge and persist fetched observations off the UI thread.
             val merged = if (report.observations.isNotEmpty()) save(report.observations) else null
             mainHandler.post {
@@ -1975,7 +1989,7 @@ private fun refreshRegisteredSources(
                             else -> "${outcome.source.sourceId}: ${outcome.observations.size} rows; issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
                         }
                     }
-                    updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted. $detail")
+                    updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted; ${capturedSnapshots.size} raw HTML snapshots archived. $detail")
                 } catch (error: Exception) {
                     updateMessage("Refresh save failed: ${error.message ?: "Unknown error"}")
                 } finally {

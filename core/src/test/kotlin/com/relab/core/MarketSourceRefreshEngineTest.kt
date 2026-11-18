@@ -185,4 +185,25 @@ class MarketSourceRefreshEngineTest {
         assertEquals(1, report.observations.size)
         assertEquals("publisher-a", report.observations.single().sourceId)
     }
+    @Test fun rawHtmlSnapshotIsRetainedWithRetrievalTimeAndHashEvenWhenParserRejectsPage() {
+        val unsupportedHtml = "<html><body>unrecognized chart markup</body></html>"
+        val capturedAt = Instant.parse("2026-11-18T03:00:00Z")
+        val report = MarketSourceRefreshEngine.refresh(
+            sridevi.take(1),
+            fetch = { FetchedChartPage(unsupportedHtml, it.url) },
+            retrievedAt = { capturedAt }
+        )
+        val outcome = report.outcomes.single()
+        val snapshot = outcome.snapshots.single()
+        assertTrue(outcome.errorMessage.orEmpty().contains("UNSUPPORTED"))
+        assertEquals(unsupportedHtml, snapshot.html)
+        assertEquals(capturedAt, snapshot.retrievedAt)
+        assertEquals(outcome.source.sourceId, snapshot.sourceId)
+        assertEquals(outcome.source.market, snapshot.market)
+        assertEquals(outcome.source.sessionId, snapshot.sessionId)
+        assertEquals(outcome.source.url, snapshot.requestedUrl)
+        assertEquals(unsupportedHtml.toByteArray(Charsets.UTF_8).size, snapshot.utf8Bytes)
+        assertEquals(64, snapshot.sha256.length)
+    }
+
 }
