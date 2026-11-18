@@ -21,13 +21,12 @@ class MarketSourceRefreshEngineTest {
         assertTrue(report.observations.all { it.market == Market.SRIDEVI && it.sessionId == "main" })
     }
 
-
     @Test fun multipleUrlsFromOnePublisherKeepOneConfiguredEvidenceIdentity() {
         val pages = listOf(
             MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://one.example/chart", "panel"),
             MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://two.example/history", "history")
         )
-        val report = MarketSourceRefreshEngine.refresh(pages, fetch = { FetchedChartPage(html, "https://landing.example/common") })
+        val report = MarketSourceRefreshEngine.refresh(pages, fetch = { FetchedChartPage(html, it.url) })
         assertEquals(2, report.observations.size)
         assertEquals(setOf("publisher-a"), report.observations.map { it.sourceId }.toSet())
         assertEquals(setOf("https://one.example/chart", "https://two.example/history"), report.observations.map { it.sourceUrl }.toSet())
@@ -65,7 +64,6 @@ class MarketSourceRefreshEngineTest {
         assertTrue(report.outcomes.single().errorMessage.orEmpty().contains("disabled"))
     }
 
-
     @Test fun unsupportedLayoutIsReportedAsFailureAndDoesNotCreateChartRows() {
         val report = MarketSourceRefreshEngine.refresh(
             sridevi.take(1),
@@ -95,5 +93,26 @@ class MarketSourceRefreshEngineTest {
         assertEquals(1, report.failedSources)
         assertTrue(report.observations.isEmpty())
         assertTrue(report.outcomes.single().errorMessage.orEmpty().contains("HTTPS"))
+    }
+
+    @Test fun rejectsCrossPublisherRedirectsInsteadOfMisattributingTheirRows() {
+        val report = MarketSourceRefreshEngine.refresh(
+            sridevi.take(1),
+            fetch = { FetchedChartPage(html, "https://unrelated.example/copied-chart") }
+        )
+        assertEquals(1, report.failedSources)
+        assertTrue(report.observations.isEmpty())
+        assertTrue(report.outcomes.single().errorMessage.orEmpty().contains("Redirect changed publisher host"))
+    }
+
+    @Test fun allowsCanonicalWwwRedirectWithinTheSamePublisher() {
+        val source = MarketSource(Market.SRIDEVI, "main", "publisher-a", "https://www.example.com/chart", "panel")
+        val report = MarketSourceRefreshEngine.refresh(
+            listOf(source),
+            fetch = { FetchedChartPage(html, "https://example.com/history") }
+        )
+        assertEquals(1, report.successfulSources)
+        assertEquals(1, report.observations.size)
+        assertEquals("publisher-a", report.observations.single().sourceId)
     }
 }
