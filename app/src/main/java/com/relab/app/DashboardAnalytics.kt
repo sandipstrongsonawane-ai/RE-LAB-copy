@@ -20,12 +20,14 @@ internal data class DashboardAnalytics(
     val selfLearningReports: List<HypothesisDiscoveryReport>,
     val candidateWalkForwardReports: List<CandidateWalkForwardReport>,
     val coverageReports: List<CoverageReport>,
+    val publisherCoverageReports: List<PublisherCoverageReport>,
     val sourceTiming: List<SourceTimingSummary>
 ) {
     companion object {
         fun compute(
             observations: List<SourceObservation>,
-            coverageRangeOverrides: Map<String, Pair<LocalDate, LocalDate>>
+            coverageRangeOverrides: Map<String, Pair<LocalDate, LocalDate>>,
+            marketSources: List<MarketSource>
         ): DashboardAnalytics {
             val groups = SourceReconciliation.reconcile(observations)
             val chartBuild = ReconciledChartBuilder.build(observations)
@@ -107,6 +109,26 @@ internal data class DashboardAnalytics(
                 }
                 .sortedWith(compareBy<CoverageReport> { it.market.name }.thenBy { it.sessionId })
 
+            // Include registered URL groups even before their first successful fetch.
+            // With no imported dates, show a rolling 30-day coverage window by default.
+            val coverageKeys = (observations.map { it.market to it.sessionId } +
+                marketSources.filter { it.enabled }.map { it.market to it.sessionId }).distinct()
+            val publisherCoverageReports = coverageKeys.map { key ->
+                val rows = observations.filter { it.market == key.first && it.sessionId == key.second }
+                val dates = rows.map { it.date }
+                val override = coverageRangeOverrides["${key.first.name}:${key.second}"]
+                val start = override?.first ?: dates.minOrNull() ?: LocalDate.now().minusDays(30)
+                val end = override?.second ?: dates.maxOrNull() ?: LocalDate.now()
+                PublisherCoverageAudit.analyze(
+                    market = key.first,
+                    sessionId = key.second,
+                    startDate = start,
+                    endDate = end,
+                    sources = marketSources,
+                    observations = rows
+                )
+            }.sortedWith(compareBy<PublisherCoverageReport> { it.market.name }.thenBy { it.sessionId })
+
             return DashboardAnalytics(
                 groups = groups,
                 repeatedSourceRecords = SourceObservationMerger.auditRepeatedSourceRecords(observations),
@@ -119,6 +141,7 @@ internal data class DashboardAnalytics(
                 selfLearningReports = selfLearningReports,
                 candidateWalkForwardReports = candidateWalkForwardReports,
                 coverageReports = coverageReports,
+                publisherCoverageReports = publisherCoverageReports,
                 sourceTiming = SourceTimingAnalytics.summarize(observations)
             )
         }
