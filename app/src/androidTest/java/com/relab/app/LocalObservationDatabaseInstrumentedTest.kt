@@ -273,4 +273,34 @@ class LocalObservationDatabaseInstrumentedTest {
         context.deleteDatabase("relab_local_history.db")
     }
 
+    @Test
+    fun marketAndSessionQueriesReturnOnlyTheirOwnPartition() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("relab_local_history.db")
+        val capturedAt = Instant.parse("2026-11-18T10:00:00Z")
+        val date = LocalDate.parse("2026-11-17")
+        val rows = listOf(
+            SourceObservation(Market.SRIDEVI, "day", date, "publisher-a",
+                retrievedAt = capturedAt, rawText = "012-07-000",
+                normalizedResult = "012-07-000", status = ObservationStatus.PUBLISHED),
+            SourceObservation(Market.SRIDEVI, "night", date, "publisher-a",
+                retrievedAt = capturedAt, rawText = "123-45-678",
+                normalizedResult = "123-45-678", status = ObservationStatus.PUBLISHED),
+            SourceObservation(Market.KALYAN, "main", date, "publisher-a",
+                retrievedAt = capturedAt, rawText = "456-78-901",
+                normalizedResult = "456-78-901", status = ObservationStatus.PUBLISHED)
+        )
+        LocalObservationDatabase(context).use { db ->
+            db.appendDataset("partition-fixture", rows)
+            assertEquals(listOf("012-07-000"), db.loadObservations(Market.SRIDEVI, "day")
+                .mapNotNull { it.normalizedResult })
+            assertEquals(listOf("123-45-678"), db.loadObservations(Market.SRIDEVI, "night")
+                .mapNotNull { it.normalizedResult })
+            assertEquals(listOf("456-78-901"), db.loadObservations(Market.KALYAN, "main")
+                .mapNotNull { it.normalizedResult })
+            assertEquals(3, db.loadObservations().size)
+        }
+        context.deleteDatabase("relab_local_history.db")
+    }
+
 }

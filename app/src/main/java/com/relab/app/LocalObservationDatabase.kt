@@ -139,7 +139,21 @@ class LocalObservationDatabase(context: Context) :
 
     fun loadObservations(): List<SourceObservation> = readObservations(readableDatabase)
 
-    private fun readObservations(database: SQLiteDatabase): List<SourceObservation> {
+    /** Returns only one market/session partition; similarly named sessions never bleed together. */
+    fun loadObservations(market: Market, sessionId: String): List<SourceObservation> {
+        require(sessionId.isNotBlank()) { "Session ID is required" }
+        return readObservations(
+            readableDatabase,
+            "market = ? AND session_id = ?",
+            arrayOf(market.name, sessionId)
+        )
+    }
+
+    private fun readObservations(
+        database: SQLiteDatabase,
+        selection: String? = null,
+        selectionArgs: Array<String>? = null
+    ): List<SourceObservation> {
         val result = mutableListOf<SourceObservation>()
         database.query(
             TABLE_OBSERVATIONS,
@@ -148,7 +162,7 @@ class LocalObservationDatabase(context: Context) :
                 "source_url", "retrieved_at", "published_at", "raw_text",
                 "normalized_result", "status"
             ),
-            null, null, null, null,
+            selection, selectionArgs, null, null,
             "chart_date ASC, id ASC"
         ).use { cursor ->
             while (cursor.moveToNext()) {
