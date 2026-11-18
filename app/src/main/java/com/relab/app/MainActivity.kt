@@ -56,6 +56,10 @@ import java.io.InputStream
 import java.util.zip.ZipInputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import org.json.JSONArray
+import org.json.JSONObject
+import com.relab.core.MarketSource
+import com.relab.core.UserMarketSourceRegistry
 
 private const val MAX_BUNDLE_ARCHIVE_BYTES = 100_000_000L
 
@@ -74,11 +78,51 @@ private fun readBoundedBytes(input: InputStream, maxBytes: Long): ByteArray {
     return output.toByteArray()
 }
 
+private fun loadMarketSources(preferences: android.content.SharedPreferences): List<MarketSource> {
+    val saved = preferences.getString("market_sources_v1", null) ?: return com.relab.core.MarketSourceCatalog.sources
+    return try {
+        val array = JSONArray(saved)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.getJSONObject(index)
+            runCatching {
+                MarketSource(
+                    market = com.relab.core.Market.valueOf(item.getString("market")),
+                    sessionId = item.getString("session"),
+                    sourceId = item.getString("publisher"),
+                    url = item.getString("url"),
+                    view = item.optString("view", "user-added"),
+                    enabled = item.optBoolean("enabled", true),
+                    note = item.optString("note", "")
+                )
+            }.getOrNull()
+        }
+    } catch (_: Exception) {
+        com.relab.core.MarketSourceCatalog.sources
+    }
+}
+
+private fun encodeMarketSources(sources: List<MarketSource>): String {
+    val array = JSONArray()
+    sources.forEach { source ->
+        array.put(JSONObject().apply {
+            put("market", source.market.name)
+            put("session", source.sessionId)
+            put("publisher", source.sourceId)
+            put("url", source.url)
+            put("view", source.view)
+            put("enabled", source.enabled)
+            put("note", source.note)
+        })
+    }
+    return array.toString()
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val database = LocalObservationDatabase(this)
         val preferences = getSharedPreferences("relab_local", MODE_PRIVATE)
+        val initialMarketSources = loadMarketSources(preferences)
 
         // One-time migration from the first CSV-only build. Keep the old preference
         // until the database transaction succeeds so a failed migration is recoverable.
@@ -104,6 +148,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RelabHome(
+                initialMarketSources = initialMarketSources,
+                onSaveMarketSources = { sources -> preferences.edit().putString(KEY_MARKET_SOURCES, encodeMarketSources(sources)).apply() },
                 initialCoverageRanges = initialCoverageRanges,
                 onSaveCoverageRange = { key, start, end ->
                     preferences.edit().putString(COVERAGE_RANGE_PREFIX + key, "$start|$end").apply()
@@ -132,11 +178,14 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val COVERAGE_RANGE_PREFIX = "coverage_range:"
+        private const val KEY_MARKET_SOURCES = "market_sources_v1"
     }
 }
 
 @Composable
 private fun RelabHome(
+    initialMarketSources: List<MarketSource>,
+    onSaveMarketSources: (List<MarketSource>) -> Unit,
     initialCsv: String?,
     initialObservations: List<com.relab.core.SourceObservation>,
     initialCoverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
@@ -150,6 +199,11 @@ private fun RelabHome(
     var observations by remember { mutableStateOf(initialObservations) }
     var importMessage by remember { mutableStateOf<String?>(null) }
     var chartUrl by remember { mutableStateOf("") }
+    var marketSources by remember { mutableStateOf(initialMarketSources) }
+    var sourceUrlInput by remember { mutableStateOf("") }
+    var sourcePublisherInput by remember { mutableStateOf("") }
+    var sourceMarketInput by remember { mutableStateOf("SRIDEVI") }
+    var sourceSessionInput by remember { mutableStateOf("main") }
     var linkBusy by remember { mutableStateOf(false) }
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) {
@@ -426,27 +480,63 @@ private fun RelabHome(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (linkBusy) "Fetching..." else "Auto-detect market & fetch") }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        enabled = !linkBusy,
-                        onClick = {
-                            refreshRegisteredSources(
-                                com.relab.core.Market.SRIDEVI, onSaveLinkObservations,
-                                { observations = it }, { importMessage = it }, { linkBusy = it }
-                            )
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Refresh Sridevi sources") }
-                    OutlinedButton(
-                        enabled = !linkBusy,
-                        onClick = {
-                            refreshRegisteredSources(
-                                com.relab.core.Market.KALYAN, onSaveLinkObservations,
-                                { observations = it }, { importMessage = it }, { linkBusy = it }
-                            )
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Refresh Kalyan sources") }
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Unlimited chart source manager", style = MaterialTheme.typography.titleMedium)
+                        Text("Har saved URL ka apna source history rahega. Same publisher ke multiple pages ek hi evidence identity use karenge.")
+                        OutlinedTextField(sourceUrlInput, { sourceUrlInput = it }, label = { Text("Chart URL (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourcePublisherInput, { sourcePublisherInput = it }, label = { Text("Publisher identity (same publisher ke pages par same naam)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceMarketInput, { sourceMarketInput = it.uppercase() }, label = { Text("Market: SRIDEVI, SRIDEVI_NIGHT, KALYAN, TIME_BAZAR, MAIN_BAZAR") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(sourceSessionInput, { sourceSessionInput = it }, label = { Text("Session ID (e.g. main / night / evening)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        Button(
+                            enabled = sourceUrlInput.isNotBlank() && sourceSessionInput.isNotBlank() && !linkBusy,
+                            onClick = {
+                                try {
+                                    val uri = java.net.URI(sourceUrlInput.trim())
+                                    val publisher = sourcePublisherInput.trim().ifBlank { uri.host.orEmpty().removePrefix("www.") }
+                                        .lowercase().replace(Regex("[^a-z0-9.-]+"), "-").trim('-')
+                                    val market = com.relab.core.Market.valueOf(sourceMarketInput.trim().uppercase())
+                                    val source = MarketSource(market, sourceSessionInput.trim(), publisher, sourceUrlInput.trim(), "user-added")
+                                    marketSources = UserMarketSourceRegistry.add(marketSources, source)
+                                    onSaveMarketSources(marketSources)
+                                    sourceUrlInput = ""
+                                    importMessage = "Source registered. Parser support will be checked on refresh; unsupported pages remain marked, no chart will be fabricated."
+                                } catch (error: Exception) {
+                                    importMessage = "Source not added: ${error.message ?: "Check URL, publisher, market and session."}"
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Add chart source") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                enabled = !linkBusy && marketSources.any { it.enabled },
+                                onClick = {
+                                    refreshRegisteredSources(marketSources, onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it })
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text(if (linkBusy) "Refreshing…" else "Refresh all sources") }
+                        }
+                        Text("Registered sources: ${marketSources.size} · Enabled: ${marketSources.count { it.enabled }}")
+                        marketSources.forEach { source ->
+                            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("${source.sourceId} · ${source.market.name}/${source.sessionId}", style = MaterialTheme.typography.titleSmall)
+                                Text(source.url, style = MaterialTheme.typography.bodySmall)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    OutlinedButton(onClick = {
+                                        marketSources = UserMarketSourceRegistry.setEnabled(marketSources, source.url, !source.enabled)
+                                        onSaveMarketSources(marketSources)
+                                    }) { Text(if (source.enabled) "Disable" else "Enable") }
+                                    OutlinedButton(onClick = {
+                                        marketSources = UserMarketSourceRegistry.remove(marketSources, source.url)
+                                        onSaveMarketSources(marketSources)
+                                    }) { Text("Remove") }
+                                    OutlinedButton(enabled = source.enabled && !linkBusy, onClick = {
+                                        refreshRegisteredSources(listOf(source), onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it })
+                                    }) { Text("Refresh") }
+                                }
+                            }
+                        }
+                    }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1031,65 +1121,58 @@ private fun importChartLink(
 }
 
 private fun refreshRegisteredSources(
-    market: com.relab.core.Market,
+    sources: List<MarketSource>,
     save: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
     updateObservations: (List<com.relab.core.SourceObservation>) -> Unit,
     updateMessage: (String) -> Unit,
     updateBusy: (Boolean) -> Unit
 ) {
-    val sources = com.relab.core.MarketSourceCatalog.enabledFor(market, "main")
+    val enabledSources = sources.filter { it.enabled }
     val mainHandler = Handler(Looper.getMainLooper())
-    if (sources.isEmpty()) {
-        updateMessage("No enabled registered sources for ${market.name}/main.")
+    if (enabledSources.isEmpty()) {
+        updateMessage("No enabled chart sources to refresh.")
         return
     }
     updateBusy(true)
-    updateMessage("Refreshing ${sources.size} registered ${market.name} publishers sequentially…")
+    updateMessage("Refreshing ${enabledSources.size} chart sources independently…")
     Thread {
         val report = com.relab.core.MarketSourceRefreshEngine.refresh(
-            sources = sources,
+            sources = enabledSources,
             fetch = { source ->
-            val connection = URL(source.url).openConnection() as HttpURLConnection
-            connection.instanceFollowRedirects = true
-            connection.connectTimeout = 15000
-            connection.readTimeout = 20000
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("User-Agent", "RE-LAB-Android/0.1")
-            connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
-            try {
-                val code = connection.responseCode
-                require(code in 200..299) { "HTTP $code" }
-                val contentType = connection.contentType.orEmpty().lowercase()
-                require(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.isBlank()) {
-                    "Unexpected content type: $contentType"
+                val connection = URL(source.url).openConnection() as HttpURLConnection
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 15000
+                connection.readTimeout = 20000
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("User-Agent", "RE-LAB-Android/0.1")
+                connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+                try {
+                    val code = connection.responseCode
+                    require(code in 200..299) { "HTTP $code" }
+                    val contentType = connection.contentType.orEmpty().lowercase()
+                    require(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.isBlank()) {
+                        "Unsupported content type: $contentType"
+                    }
+                    val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
+                    com.relab.core.FetchedChartPage(bytes.toString(Charsets.UTF_8), connection.url.toString())
+                } finally {
+                    connection.disconnect()
                 }
-                val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
-                com.relab.core.FetchedChartPage(bytes.toString(Charsets.UTF_8), connection.url.toString())
-            } finally {
-                connection.disconnect()
-            }
             },
             retrievedAt = { java.time.Instant.now() }
         )
         mainHandler.post {
             try {
                 val extracted = report.observations
-                if (extracted.isNotEmpty()) {
-                    val merged = save(extracted)
-                    updateObservations(merged)
-                }
+                if (extracted.isNotEmpty()) updateObservations(save(extracted))
                 val detail = report.outcomes.joinToString(" | ") { outcome ->
-                    val name = outcome.source.sourceId
                     when {
-                        outcome.errorMessage != null -> "$name: FAILED (${outcome.errorMessage})"
-                        outcome.observations.isEmpty() -> "$name: fetched, 0 rows parsed; skipped ${outcome.skippedRows}"
-                        else -> "$name: ${outcome.observations.size} rows; malformed/issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
+                        outcome.errorMessage != null -> "${outcome.source.sourceId}: UNSUPPORTED/FAILED (${outcome.errorMessage})"
+                        outcome.observations.isEmpty() -> "${outcome.source.sourceId}: no rows parsed; skipped ${outcome.skippedRows}; parser support required"
+                        else -> "${outcome.source.sourceId}: ${outcome.observations.size} rows; issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
                     }
                 }
-                updateMessage(
-                    "${market.name}: ${report.successfulSources}/${report.outcomes.size} sources fetched; " +
-                        "${extracted.size} observations extracted. $detail"
-                )
+                updateMessage("${report.successfulSources}/${report.outcomes.size} source requests completed; ${extracted.size} observations extracted. ${detail}")
             } catch (error: Exception) {
                 updateMessage("Refresh save failed: ${error.message ?: "Unknown error"}")
             } finally {
