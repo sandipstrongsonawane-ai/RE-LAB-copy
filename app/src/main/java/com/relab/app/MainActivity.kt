@@ -225,15 +225,15 @@ private fun RelabHome(
             )
         }
     }
-    val selfLearningReports = remember(researchRecords) {
-        researchRecords.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
+    val selfLearningReports = remember(chartBuild.records) {
+        chartBuild.records.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
             listOf(
                 com.relab.core.SelfLearningHypothesisEngine.discover(
-                    researchRecords, market, sessionId, com.relab.core.HypothesisSide.OPEN,
+                    chartBuild.records, market, sessionId, com.relab.core.HypothesisSide.OPEN,
                     minimumHistory = 8, minimumSupport = 3
                 ),
                 com.relab.core.SelfLearningHypothesisEngine.discover(
-                    researchRecords, market, sessionId, com.relab.core.HypothesisSide.CLOSE,
+                    chartBuild.records, market, sessionId, com.relab.core.HypothesisSide.CLOSE,
                     minimumHistory = 8, minimumSupport = 3
                 )
             )
@@ -528,7 +528,7 @@ private fun RelabHome(
                 }
                 Text("Self-learning reverse engineering · discovered rules", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Rules are mined separately per market and session from earlier chart transitions. Support and baseline lift are historical evidence, not guaranteed prediction accuracy.",
+                    "Rules are mined separately per market/session from multi-source consensus records only. Support and baseline lift are historical evidence, not guaranteed prediction accuracy.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (selfLearningReports.isEmpty()) {
