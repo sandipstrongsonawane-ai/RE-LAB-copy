@@ -154,6 +154,43 @@ class WeeklyChartHtmlExtractorTest(unittest.TestCase):
         )
         self.assertEqual("2026-08-24", first[0]["source_record_id"])
 
+    def test_extracts_month_name_week_range_and_dash_missing_marker(self):
+        html = """
+        <table><tr><td>2024 DEC 30 to JAN 05</td>
+        <td>569 04 248</td><td>348 57 557</td><td>690 57 340</td>
+        <td>240 64 167</td><td>478 96 457</td><td>270 93 148</td>
+        <td>--------</td></tr></table>
+        """
+        rows, issues = extract_rows(
+            html, market="SRIDEVI", session_id="main", source_id="realmatka",
+            retrieved_at="2026-11-18T12:00:00+05:30",
+            source_url="https://www.realmatka.in/panel-chart-record/sridevi"
+        )
+        self.assertEqual([], issues)
+        self.assertEqual(7, len(rows))
+        self.assertEqual("2024-12-30", rows[0]["date"])
+        self.assertEqual("2025-01-05", rows[6]["date"])
+        self.assertEqual("569-04-248", rows[0]["result"])
+        self.assertEqual("MISSING_FROM_SOURCE", rows[6]["status"])
+
+    def test_extracts_iso_week_range_used_by_kalyan_archive(self):
+        html = """
+        <table><tr><td>2025-09-22 To 2025-09-28</td>
+        <td>********</td><td>********</td><td>590 49 478</td>
+        <td>790 69 135</td><td>458 79 126</td><td>557 71 128</td>
+        <td>********</td></tr></table>
+        """
+        rows, issues = extract_rows(
+            html, market="SRIDEVI", session_id="main", source_id="ratan567",
+            retrieved_at="2026-11-18T12:00:00+05:30",
+            source_url="https://ratan567official.com/kalyan/pana-chart/"
+        )
+        self.assertEqual([], issues)
+        self.assertEqual("2025-09-22", rows[0]["date"])
+        self.assertEqual("2025-09-28", rows[6]["date"])
+        self.assertEqual("590-49-478", rows[2]["result"])
+        self.assertEqual("MISSING_FROM_SOURCE", rows[0]["status"])
+
     def test_retrieval_timestamp_requires_timezone_offset(self):
         with self.assertRaisesRegex(ValueError, "UTC offset"):
             extract_rows(
