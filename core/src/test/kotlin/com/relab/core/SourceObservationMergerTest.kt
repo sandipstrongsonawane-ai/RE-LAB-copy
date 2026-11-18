@@ -54,6 +54,21 @@ class SourceObservationMergerTest {
         assertEquals(2, result.observations.size)
     }
 
+    @Test fun multipleUrlsFromSamePublisherDoNotCountAsIndependentConsensus() {
+        val first = observation("same-publisher.example", "115-73-229").copy(
+            sourceUrl = "https://same-publisher.example/chart-a"
+        )
+        val second = first.copy(
+            sourceUrl = "https://same-publisher.example/chart-b",
+            retrievedAt = Instant.parse("2026-11-17T11:00:00Z")
+        )
+
+        val reconciled = SourceReconciliation.reconcile(listOf(first, second)).single()
+        assertEquals(ReconciliationState.SINGLE_SOURCE_UNVERIFIED, reconciled.state)
+        assertNull(reconciled.agreedResult)
+        assertEquals(2, reconciled.observations.size)
+    }
+
     @Test fun repeatedSourceRecordWithSameContentIsAuditedWithoutDeletingSnapshots() {
         val first = observation("archive", "115-73-229").copy(sourceRecordId = "2026-11-17")
         val later = first.copy(retrievedAt = Instant.parse("2026-11-17T11:00:00Z"))
