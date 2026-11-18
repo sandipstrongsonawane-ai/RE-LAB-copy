@@ -167,26 +167,34 @@ def extract_rows(
         if start.weekday() != 0 or day_count not in allowed_day_counts:
             issues.append(f"row {row_number}: week range does not match {market} chart layout: {cells[0]}")
             continue
-        if len(cells) != (day_count * 3) + 1:
+        one_cell_per_day = len(cells) == day_count + 1
+        three_cells_per_day = len(cells) == (day_count * 3) + 1
+        if not one_cell_per_day and not three_cells_per_day:
             issues.append(
                 f"row {row_number}: date range has {day_count} days but row contains "
-                f"{len(cells) - 1} cells; expected three cells per day"
+                f"{len(cells) - 1} cells; expected one or three cells per day"
             )
             continue
 
-        daily_groups = [cells[index:index + 3] for index in range(1, len(cells), 3)]
+        daily_groups = (
+            [[cell] for cell in cells[1:]]
+            if one_cell_per_day
+            else [cells[index:index + 3] for index in range(1, len(cells), 3)]
+        )
         for offset, parts in enumerate(daily_groups):
             chart_date = start + timedelta(days=offset)
             raw_cell = " | ".join(parts)
-            open_value, jodi_value, close_value = parts
             combined = " | ".join(parts)
-            if any("*" in part for part in parts):
+            if one_cell_per_day:
+                status, result = _cell_observation(parts[0])
+            elif any("*" in part for part in parts):
                 status, result = "MISSING_FROM_SOURCE", ""
             elif re.search(r"\b(?:holiday|closed|market\s+off|no\s+market|weekly\s+off|pending|awaiting|not\s+declared)\b", combined, re.IGNORECASE):
                 status, result = _cell_observation(combined)
             elif not any(part.strip() for part in parts):
                 status, result = "MISSING_FROM_SOURCE", ""
             else:
+                open_value, jodi_value, close_value = parts
                 open_digits = re.sub(r"\D", "", open_value)
                 jodi_digits = re.sub(r"\D", "", jodi_value)
                 close_digits = re.sub(r"\D", "", close_value)
