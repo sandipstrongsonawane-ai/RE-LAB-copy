@@ -13,6 +13,8 @@ data class BundleValidationResult(
 
 /** Verifies bundle structure and every artifact checksum before a restore/import is attempted. */
 object ResearchBundleValidator {
+    private data class IndexedArtifact(val name: String, val size: Long, val sha256: String)
+
     private val requiredFiles = setOf(
         "source-observations.csv",
         "derived-consensus-research.csv",
@@ -25,8 +27,14 @@ object ResearchBundleValidator {
         "bundle-index.json"
     )
 
-    private val indexEntry = Regex(
-        """\{"file":"([^"]+)","utf8_bytes":([0-9]+),"sha256":"([a-f0-9]{64})"\}"""
+    // This intentionally accepts only the index shape emitted by ResearchBundleExporter.
+    // Anchoring the entire document prevents regex matches inside malformed JSON or trailing junk.
+    private val indexRoot = Regex(
+        """\\s*\\{\\s*"bundle_format_version"\\s*:\\s*2\\s*,\\s*(?:"generated_at"\\s*:\\s*"(?:\\\\.|[^"\\\\])*"\\s*,\\s*)?"artifacts"\\s*:\\s*\\[(.*)]\\s*}\\s*""",
+        setOf(RegexOption.DOT_MATCHES_ALL)
+    )
+    private val artifactPattern = Regex(
+        """\\s*\\{\\s*"file"\\s*:\\s*"([^"\\\\]*)"\\s*,\\s*"utf8_bytes"\\s*:\\s*([0-9]+)\\s*,\\s*"sha256"\\s*:\\s*"([a-f0-9]{64})"\\s*}\\s*"""
     )
 
     fun validate(zipBytes: ByteArray, maxTotalBytes: Long = 100_000_000L): BundleValidationResult {
@@ -39,7 +47,7 @@ object ResearchBundleValidator {
                     val entry = zip.nextEntry ?: break
                     val name = entry.name
                     if (entry.isDirectory || name.startsWith("/") || name.split('/').any { it == ".." } ||
-                        name.contains('\\') || name !in requiredFiles) {
+                        name.contains('\\\\') || name !in requiredFiles) {
                         errors += "Unsupported or unsafe ZIP entry: $name"
                         zip.closeEntry()
                         continue
@@ -77,32 +85,29 @@ object ResearchBundleValidator {
         val indexBytes = entries["bundle-index.json"]
         var verified = 0
         if (indexBytes != null) {
-            val index = String(indexBytes, Charsets.UTF_8)
-            if (!Regex(""""bundle_format_version"\s*:\s*2""").containsMatchIn(index)) {
-                errors += "Unsupported bundle format version"
-            }
-            val matches = indexEntry.findAll(index).toList()
-            val indexedNames = matches.map { it.groupValues[1] }
-            if (indexedNames.size != matches.map { it.groupValues[1] }.distinct().size) {
-                errors += "Duplicate artifact in bundle index"
-            }
-            val expectedNames = requiredFiles - "bundle-index.json"
-            if (indexedNames.toSet() != expectedNames) {
-                errors += "Bundle index does not list exactly the required artifacts"
-            }
-            matches.forEach { match ->
-                val name = match.groupValues[1]
-                val expectedSize = match.groupValues[2].toLongOrNull()
-                val expectedHash = match.groupValues[3]
-                val bytes = entries[name]
-                if (bytes == null) {
-                    errors += "Indexed artifact missing: $name"
-                } else if (expectedSize != bytes.size.toLong()) {
-                    errors += "Byte size mismatch: $name"
-                } else if (sha256(bytes) != expectedHash) {
-                    errors += "SHA-256 mismatch: $name"
-                } else {
-                    verified++
+            val parsedArtifacts = parseIndex(String(indexBytes, Charsets.UTF_8))
+            if (parsedArtifacts == null) {
+                errors += "Malformed bundle index JSON or unsupported index structure"
+            } else {
+                val indexedNames = parsedArtifacts.map { it.name }
+                if (indexedNames.size != indexedNames.distinct().size) {
+                    errors += "Duplicate artifact in bundle index"
+                }
+                val expectedNames = requiredFiles - "bundle-index.json"
+                if (indexedNames.toSet() != expectedNames) {
+                    errors += "Bundle index does not list exactly the required artifacts"
+                }
+                parsedArtifacts.forEach { artifact ->
+                    val bytes = entries[artifact.name]
+                    if (bytes == null) {
+                        errors += "Indexed artifact missing: ${artifact.name}"
+                    } else if (artifact.size != bytes.size.toLong()) {
+                        errors += "Byte size mismatch: ${artifact.name}"
+                    } else if (sha256(bytes) != artifact.sha256) {
+                        errors += "SHA-256 mismatch: ${artifact.name}"
+                    } else {
+                        verified++
+                    }
                 }
             }
         } else {
@@ -131,6 +136,32 @@ object ResearchBundleValidator {
             }
         }
         return BundleValidationResult(errors.isEmpty(), verified, errors)
+    }
+
+    /** Parses the complete exporter index; any unconsumed character or unknown field is rejected. */
+    private fun parseIndex(input: String): List<IndexedArtifact>? {
+        val root = indexRoot.matchEntire(input) ?: return null
+        val body = root.groupValues[1]
+        val artifacts = mutableListOf<IndexedArtifact>()
+        var cursor = 0
+        fun skipWhitespace() {
+            while (cursor < body.length && body[cursor].isWhitespace()) cursor++
+        }
+        skipWhitespace()
+        if (cursor == body.length) return artifacts
+        while (cursor < body.length) {
+            val match = artifactPattern.matchAt(body, cursor) ?: return null
+            val size = match.groupValues[2].toLongOrNull() ?: return null
+            artifacts += IndexedArtifact(match.groupValues[1], size, match.groupValues[3])
+            cursor = match.range.last + 1
+            skipWhitespace()
+            if (cursor == body.length) break
+            if (body[cursor] != ',') return null
+            cursor++
+            skipWhitespace()
+            if (cursor == body.length) return null
+        }
+        return artifacts
     }
 
     private fun sha256(bytes: ByteArray): String =
