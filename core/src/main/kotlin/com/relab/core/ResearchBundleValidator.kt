@@ -30,11 +30,11 @@ object ResearchBundleValidator {
     // This intentionally accepts only the index shape emitted by ResearchBundleExporter.
     // Anchoring the entire document prevents regex matches inside malformed JSON or trailing junk.
     private val indexRoot = Regex(
-        """\\s*\\{\\s*"bundle_format_version"\\s*:\\s*2\\s*,\\s*(?:"generated_at"\\s*:\\s*"(?:\\\\.|[^"\\\\])*"\\s*,\\s*)?"artifacts"\\s*:\\s*\\[(.*)]\\s*}\\s*""",
+        """\s*\{\s*"bundle_format_version"\s*:\s*2\s*,\s*(?:"generated_at"\s*:\s*"(?:\\.|[^"\\])*"\s*,\s*)?"artifacts"\s*:\s*\[(.*)]\s*}\s*""",
         setOf(RegexOption.DOT_MATCHES_ALL)
     )
     private val artifactPattern = Regex(
-        """\\s*\\{\\s*"file"\\s*:\\s*"([^"\\\\]*)"\\s*,\\s*"utf8_bytes"\\s*:\\s*([0-9]+)\\s*,\\s*"sha256"\\s*:\\s*"([a-f0-9]{64})"\\s*}\\s*"""
+        """\s*\{\s*"file"\s*:\s*"([^"\\]*)"\s*,\s*"utf8_bytes"\s*:\s*([0-9]+)\s*,\s*"sha256"\s*:\s*"([a-f0-9]{64})"\s*}\s*"""
     )
 
     fun validate(zipBytes: ByteArray, maxTotalBytes: Long = 100_000_000L): BundleValidationResult {
@@ -47,7 +47,7 @@ object ResearchBundleValidator {
                     val entry = zip.nextEntry ?: break
                     val name = entry.name
                     if (entry.isDirectory || name.startsWith("/") || name.split('/').any { it == ".." } ||
-                        name.contains('\\\\') || name !in requiredFiles) {
+                        name.contains('\\') || name !in requiredFiles) {
                         errors += "Unsupported or unsafe ZIP entry: $name"
                         zip.closeEntry()
                         continue
