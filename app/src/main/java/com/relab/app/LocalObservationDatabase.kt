@@ -284,7 +284,8 @@ class LocalObservationDatabase(context: Context) :
     fun appendResearchBundle(
         sourceCsv: String,
         incomingObservations: List<SourceObservation>,
-        incomingLedger: PredictionLearningLedger
+        incomingLedger: PredictionLearningLedger,
+        incomingSnapshots: List<SourcePageSnapshot> = emptyList()
     ): Pair<List<SourceObservation>, PredictionLearningLedger> {
         val db = writableDatabase
         db.beginTransaction()
@@ -292,6 +293,7 @@ class LocalObservationDatabase(context: Context) :
             // Nested transactions keep both operations under this outer commit boundary.
             val mergedObservations = appendDataset(sourceCsv, incomingObservations)
             val mergedLedger = appendPredictionLedger(incomingLedger)
+            appendSourceSnapshots(incomingSnapshots)
             db.setTransactionSuccessful()
             return mergedObservations to mergedLedger
         } finally {

@@ -179,8 +179,8 @@ class MainActivity : ComponentActivity() {
                 },
                 onSaveLockedPrediction = { database.appendLockedPrediction(it) },
                 onSavePredictionVerification = { database.appendPredictionVerification(it) },
-                onRestoreResearchBundle = { csv, importedObservations, ledger ->
-                    database.appendResearchBundle(csv, importedObservations, ledger)
+                onRestoreResearchBundle = { csv, importedObservations, ledger, snapshots ->
+                    database.appendResearchBundle(csv, importedObservations, ledger, snapshots)
                 },
                 onSaveCsv = { csv, observations ->
                     require(observations.isNotEmpty()) { "No valid source observations to save" }
@@ -219,7 +219,7 @@ private fun RelabHome(
     loadInitialData: suspend () -> InitialAppData,
     onSaveLockedPrediction: (com.relab.core.LockedSidePrediction) -> Unit,
     onSavePredictionVerification: (com.relab.core.PredictionVerification) -> Unit,
-    onRestoreResearchBundle: (String, List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger) -> Pair<List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger>,
+    onRestoreResearchBundle: (String, List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger, List<com.relab.core.SourcePageSnapshot>) -> Pair<List<com.relab.core.SourceObservation>, com.relab.core.PredictionLearningLedger>,
     initialCoverageRanges: Map<String, Pair<LocalDate, LocalDate>>,
     onSaveCoverageRange: (String, LocalDate, LocalDate) -> Unit,
     onSaveCsv: (String, List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
@@ -504,18 +504,36 @@ private fun RelabHome(
                         content
                     } ?: error("Verified bundle has no prediction-learning-ledger.csv")
                     val importedLedger = com.relab.core.PredictionLedgerCsvCodec.import(ledgerCsv)
-                    if (parsed.observations.isEmpty() && importedLedger.lockedPredictions.isEmpty()) {
+                    val snapshotEntries = ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+                        val captured = linkedMapOf<String, ByteArray>()
+                        while (true) {
+                            val entry = zip.nextEntry ?: break
+                            if (entry.name == "source-page-snapshots.csv" || entry.name.startsWith("source-snapshots/")) {
+                                captured[entry.name] = readBoundedBytes(zip, MAX_BUNDLE_ARCHIVE_BYTES)
+                            }
+                            zip.closeEntry()
+                        }
+                        captured
+                    }
+                    val snapshotManifest = snapshotEntries["source-page-snapshots.csv"]?.toString(Charsets.UTF_8)
+                    val htmlFiles = snapshotEntries.filterKeys { it.startsWith("source-snapshots/") }
+                    val importedSnapshots = if (snapshotManifest == null) emptyList() else
+                        com.relab.core.SourcePageSnapshotCsvCodec.import(snapshotManifest, htmlFiles)
+                    if (parsed.observations.isEmpty() && importedLedger.lockedPredictions.isEmpty() && importedSnapshots.isEmpty()) {
                         importMessage = "Bundle verified, but it contains no valid source observations or locked predictions."
                     } else {
                         val previousCount = observations.size
                         val (merged, restoredLedger) = onRestoreResearchBundle(
-                            sourceCsv, parsed.observations, importedLedger
+                            sourceCsv, parsed.observations, importedLedger, importedSnapshots
                         )
                         val addedCount = (merged.size - previousCount).coerceAtLeast(0)
                         observations = merged
                         predictionLedger = restoredLedger
+                        sourceSnapshots = (sourceSnapshots + importedSnapshots).distinctBy {
+                            listOf(it.sourceId, it.market.name, it.sessionId, it.requestedUrl, it.retrievedAt.toString(), it.sha256).joinToString("|")
+                        }
                         rawCsv = sourceCsv
-                        importMessage = "Verified bundle restored atomically: ${validation.verifiedFiles} artifact checksums passed; added ${addedCount} observations and restored ${importedLedger.lockedPredictions.size} locked predictions / ${importedLedger.verifications.size} verification attempts. Existing history was retained. Row issues: ${parsed.issues.size}."
+                        importMessage = "Verified bundle restored atomically: ${validation.verifiedFiles} artifact checksums passed; added ${addedCount} observations, restored ${importedSnapshots.size} raw HTML snapshots and ${importedLedger.lockedPredictions.size} locked predictions / ${importedLedger.verifications.size} verification attempts. Existing history was retained. Row issues: ${parsed.issues.size}."
                     }
                 }
             } catch (error: Exception) {

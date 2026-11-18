@@ -140,4 +140,32 @@ class ResearchBundleExporterTest {
         assertTrue(manifest.contains(htmlPath))
     }
 
+    @Test
+    fun snapshotManifestRoundTripsExactHtmlAndProvenance() {
+        val original = SourcePageSnapshot(
+            sourceId = "publisher,one", market = Market.SRIDEVI, sessionId = "night",
+            requestedUrl = "https://publisher.example/chart?q=one,two",
+            finalUrl = "https://publisher.example/chart",
+            retrievedAt = Instant.parse("2026-11-18T03:00:00Z"),
+            html = "<html data-note=\"quoted, value\">012-07-000</html>"
+        )
+        val bundle = ResearchBundleExporter.export(
+            emptyList(), emptyList(), emptyList(), emptyList(),
+            Instant.parse("2026-11-18T04:00:00Z"),
+            sourceSnapshots = listOf(original)
+        )
+        val entries = linkedMapOf<String, ByteArray>()
+        ZipInputStream(ByteArrayInputStream(bundle)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                entries[entry.name] = zip.readBytes()
+                zip.closeEntry()
+            }
+        }
+        val manifest = String(entries.getValue("source-page-snapshots.csv"), Charsets.UTF_8)
+        val htmlFiles = entries.filterKeys { it.startsWith("source-snapshots/") }
+        val restored = SourcePageSnapshotCsvCodec.import(manifest, htmlFiles)
+        assertEquals(listOf(original), restored)
+    }
+
 }
