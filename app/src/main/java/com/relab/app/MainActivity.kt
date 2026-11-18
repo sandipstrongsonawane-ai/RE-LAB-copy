@@ -344,27 +344,35 @@ private fun RelabHome(
             )
         }
     }
-    val candidateWalkForwardReports = remember(observations) {
-        researchRecords.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
-            listOf(
-                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                    observations, market, sessionId, com.relab.core.PannaSide.OPEN,
-                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
-                ),
-                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                    observations, market, sessionId, com.relab.core.PannaSide.CLOSE,
-                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
-                ),
-                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                    observations, market, sessionId, com.relab.core.PannaSide.OPEN,
-                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
-                ),
-                com.relab.core.CandidateWalkForwardEvaluator.evaluate(
-                    observations, market, sessionId, com.relab.core.PannaSide.CLOSE,
-                    minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+    var candidateWalkForwardReports by remember {
+        mutableStateOf<List<com.relab.core.CandidateWalkForwardReport>>(emptyList())
+    }
+    LaunchedEffect(observations) {
+        val snapshot = observations
+        val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val records = ReconciledChartBuilder.buildExploratoryRecords(snapshot)
+            records.map { it.market to it.sessionId }.distinct().flatMap { (market, sessionId) ->
+                listOf(
+                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                        snapshot, market, sessionId, com.relab.core.PannaSide.OPEN,
+                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
+                    ),
+                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                        snapshot, market, sessionId, com.relab.core.PannaSide.CLOSE,
+                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = false
+                    ),
+                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                        snapshot, market, sessionId, com.relab.core.PannaSide.OPEN,
+                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+                    ),
+                    com.relab.core.CandidateWalkForwardEvaluator.evaluate(
+                        snapshot, market, sessionId, com.relab.core.PannaSide.CLOSE,
+                        minimumHistory = 5, topN = 10, allowSingleSourceExploration = true
+                    )
                 )
-            )
+            }
         }
+        candidateWalkForwardReports = result
     }
     val researchExportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) {
@@ -1236,6 +1244,9 @@ private fun importChartLink(
                 val report = com.relab.core.HtmlChartImporter.import(
                     html, connection.url.toString(), market, "main", java.time.Instant.now()
                 )
+                // Persist on the worker thread: SQLite writes and dataset merging must
+                // never block the Compose/UI thread after a successful fetch.
+                val merged = if (report.observations.isNotEmpty()) save(report.observations) else emptyList()
                 mainHandler.post {
                     try {
                         if (report.observations.isEmpty()) {
@@ -1243,7 +1254,6 @@ private fun importChartLink(
                                 ?: "No dated chart-result rows found. This page may be JavaScript-rendered or use an unsupported layout."
                             updateMessage("No records imported: $detail Skipped rows: ${report.skippedRows}.")
                         } else {
-                            val merged = save(report.observations)
                             updateObservations(merged)
                             updateMessage(
                                 "${market.name}: fetched ${report.observations.size} rows; total saved observations ${merged.size}. " +
@@ -1310,10 +1320,12 @@ private fun refreshRegisteredSources(
             },
             retrievedAt = { java.time.Instant.now() }
         )
+        // Merge and persist fetched observations off the UI thread.
+        val merged = if (report.observations.isNotEmpty()) save(report.observations) else null
         mainHandler.post {
             try {
                 val extracted = report.observations
-                if (extracted.isNotEmpty()) updateObservations(save(extracted))
+                if (merged != null) updateObservations(merged)
                 val checkedAt = java.time.Instant.now().toString()
                 updateStatuses(report.outcomes.associate { outcome ->
                     val state = if (outcome.errorMessage == null) {
