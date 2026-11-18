@@ -1,0 +1,52 @@
+package com.relab.core
+
+import java.time.Instant
+import java.time.LocalDate
+import org.junit.Assert.*
+import org.junit.Test
+
+class MatkaFlashHistoryParserAdapterTest {
+    private val pageUrl = "https://matkaflash.com/sridevi?tab=history"
+    private val retrievedAt = Instant.parse("2026-11-18T03:00:00Z")
+
+    private fun fixture(): String =
+        requireNotNull(javaClass.classLoader?.getResourceAsStream("fixtures/matkaflash-sridevi-history.html")) {
+            "MatkaFlash fixture resource is missing"
+        }.bufferedReader().use { it.readText() }
+
+    @Test fun recognizesPublisherAndExtractsDatedHistoryWithoutLosingLeadingZeroJodi() {
+        val html = fixture()
+        assertTrue(MatkaFlashHistoryParserAdapter.supports(html, pageUrl))
+
+        val parsed = ChartParserRegistry.parse(html, pageUrl, Market.SRIDEVI, "main", retrievedAt)
+
+        assertEquals("matkaflash-history-v1", parsed.parserId)
+        assertEquals(4, parsed.observations.size)
+        val published = parsed.observations.filter { it.status == ObservationStatus.PUBLISHED }
+        assertEquals(3, published.size)
+        assertEquals("115-73-229", published.first().normalizedResult)
+        assertEquals("2026-11-17", published.first().date.toString())
+        assertEquals("578-07-368", published.single { it.date == LocalDate.parse("2026-11-10") }.normalizedResult)
+        assertTrue(published.all { it.sourceUrl == pageUrl && it.sourceId == "matkaflash.com" })
+    }
+
+    @Test fun pendingRowsArePreservedButNeverTreatedAsPublishedResults() {
+        val parsed = MatkaFlashHistoryParserAdapter.parse(
+            fixture(), pageUrl, Market.SRIDEVI, "main", retrievedAt
+        )
+        val pending = parsed.observations.single { it.date == LocalDate.parse("2026-11-18") }
+        assertEquals(ObservationStatus.PENDING, pending.status)
+        assertNull(pending.normalizedResult)
+    }
+
+    @Test fun adapterDoesNotClaimOtherPublishersOrHeaderLayouts() {
+        val html = fixture()
+        assertFalse(MatkaFlashHistoryParserAdapter.supports(html, "https://example.com/sridevi"))
+        assertFalse(
+            MatkaFlashHistoryParserAdapter.supports(
+                "<table><tr><th>Date</th><th>Result</th></tr></table>",
+                pageUrl
+            )
+        )
+    }
+}
