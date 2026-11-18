@@ -37,7 +37,7 @@ class HtmlChartImporterTest {
         assertEquals(1, report.observations.size)
         assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, report.observations.single().status)
         assertNull(report.observations.single().normalizedResult)
-        assertEquals("277-65-249", report.observations.single().rawText)
+        assertEquals("2026-11-22 | 277-65-249", report.observations.single().rawText)
     }
 
     @Test fun invalidMathIsRetainedAsMalformedNotPublished() {
