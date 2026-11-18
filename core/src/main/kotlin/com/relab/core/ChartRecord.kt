@@ -14,7 +14,7 @@ class Market private constructor(
         val SRIDEVI = Market("SRIDEVI", allDays)
         val SRIDEVI_NIGHT = Market("SRIDEVI_NIGHT", allDays)
         val KALYAN = Market("KALYAN", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
-        val TIME_BAZAR = Market("TIME_BAZAR", allDays)
+        val TIME_BAZAR = Market("TIME_BAZAR", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
         val MAIN_BAZAR = Market(
             "MAIN_BAZAR",
             setOf(
@@ -26,7 +26,6 @@ class Market private constructor(
         val MILAN_DAY = Market("MILAN_DAY", allDays)
         val KALYAN_MORNING = Market("KALYAN_MORNING", allDays)
         val KALYAN_NIGHT = Market("KALYAN_NIGHT", allDays)
-        val TIME_BAZAR = Market("TIME_BAZAR", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
         val TIME_BAZAR_DAY = Market("TIME_BAZAR_DAY", allDays)
         val NEW_TIME_BAZAR = Market("NEW_TIME_BAZAR", java.time.DayOfWeek.entries.filter { it != java.time.DayOfWeek.SUNDAY }.toSet())
         val MAIN_BAZAR_NIGHT = Market("MAIN_BAZAR_NIGHT", allDays)
