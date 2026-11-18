@@ -354,6 +354,7 @@ private fun RelabHome(
     val patternAnalyses = dashboardAnalytics?.patternAnalyses.orEmpty()
     val intelligenceReports = dashboardAnalytics?.intelligenceReports.orEmpty()
     val crossMarketReport = dashboardAnalytics?.crossMarketReport
+    val regimeChangeFindings = dashboardAnalytics?.regimeChangeFindings.orEmpty()
     val candidateSets = dashboardAnalytics?.candidateSets.orEmpty()
     val sangamResearchSets = dashboardAnalytics?.sangamResearchSets.orEmpty()
     val sangamWalkForwardReports = dashboardAnalytics?.sangamWalkForwardReports.orEmpty()
@@ -435,7 +436,7 @@ private fun RelabHome(
             try {
                 val bundle = ResearchBundleExporter.export(
                     observations, chartBuild.records, patternAnalyses, coverageReports, java.time.Instant.now(), predictionLedger,
-                    crossMarketReport, candidateWalkForwardReports
+                    crossMarketReport, candidateWalkForwardReports, regimeChangeFindings
                 )
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bundle) }
                     ?: error("Research bundle file could not be written")
@@ -1070,6 +1071,41 @@ private fun RelabHome(
                         }
                     }
                     Text(crossReport.note, style = MaterialTheme.typography.labelSmall)
+                }
+                Text(
+                    uiText(uiLanguage, "Chronological regime-change monitor · consensus only", "तारीख क्रम regime-change मॉनिटर · केवल सहमति रिकॉर्ड", "कालक्रमानुसार regime-change मॉनिटर · फक्त सहमती नोंदी"),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    uiText(uiLanguage, "Compares the latest 20 validated consensus records with the previous 20. Permutation p-values are adjusted within each market/session. This is a historical stability check, not a prediction.", "आखिरी 20 वैध सहमति रिकॉर्ड की तुलना उससे पहले के 20 रिकॉर्ड से होती है। Permutation p-value को हर market/session में adjust किया जाता है। यह पुराने डेटा की स्थिरता जांच है, भविष्यवाणी नहीं।", "शेवटच्या 20 वैध सहमती नोंदींची आधीच्या 20 नोंदींशी तुलना होते. Permutation p-value प्रत्येक market/session मध्ये adjust केला जातो. ही ऐतिहासिक स्थिरता तपासणी आहे, भविष्यवाणी नाही."),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (regimeChangeFindings.isEmpty()) {
+                    Text(uiText(uiLanguage, "No validated consensus history is available yet.", "अभी वैध सहमति वाला इतिहास उपलब्ध नहीं है।", "अद्याप वैध सहमतीचा इतिहास उपलब्ध नाही."))
+                } else {
+                    regimeChangeFindings.forEach { finding ->
+                        val statusColor = when (finding.status) {
+                            com.relab.core.RegimeChangeStatus.SHIFT_DETECTED -> MaterialTheme.colorScheme.error
+                            com.relab.core.RegimeChangeStatus.WATCH -> MaterialTheme.colorScheme.tertiary
+                            com.relab.core.RegimeChangeStatus.STABLE -> MaterialTheme.colorScheme.primary
+                            com.relab.core.RegimeChangeStatus.INSUFFICIENT_HISTORY -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("${finding.market} · ${finding.sessionId} · ${finding.feature.uppercase()}", style = MaterialTheme.typography.titleSmall)
+                                Text(finding.status.name.replace('_', ' '), color = statusColor, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "Effect ${finding.totalVariation?.let { "%.3f".format(it) } ?: "—"} · p ${finding.permutationPValue?.let { "%.3f".format(it) } ?: "—"} · q ${finding.adjustedQValue?.let { "%.3f".format(it) } ?: "—"}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text("${finding.previousWindowRecords} previous / ${finding.recentWindowRecords} recent records", style = MaterialTheme.typography.bodySmall)
+                                Text(finding.explanation, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
                 }
                 Text(uiText(uiLanguage, "Next draw candidate research", "अगले रिजल्ट के कैंडिडेट", "पुढील निकालाचे उमेदवार"), style = MaterialTheme.typography.titleLarge)
                 if (candidateSets.isEmpty()) {
