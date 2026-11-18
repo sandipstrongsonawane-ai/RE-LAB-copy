@@ -361,6 +361,7 @@ private fun RelabHome(
     val regimeChangeFindings = dashboardAnalytics?.regimeChangeFindings.orEmpty()
     val weekdayPatternFindings = dashboardAnalytics?.weekdayPatternFindings.orEmpty()
     val candidateSets = dashboardAnalytics?.candidateSets.orEmpty()
+    val verifiedCandidateSets = dashboardAnalytics?.verifiedCandidateSets.orEmpty()
     val sangamResearchSets = dashboardAnalytics?.sangamResearchSets.orEmpty()
     val sangamWalkForwardReports = dashboardAnalytics?.sangamWalkForwardReports.orEmpty()
     val selfLearningReports = dashboardAnalytics?.selfLearningReports.orEmpty()
@@ -1193,8 +1194,14 @@ private fun RelabHome(
                 if (candidateSets.isEmpty()) {
                     Text(uiText(uiLanguage, "No usable published history yet. Candidates require at least 5 earlier valid rows; single-source results are exploratory and remain unverified.", "अभी उपयोगी प्रकाशित इतिहास नहीं है। कैंडिडेट के लिए कम से कम 5 पुराने वैध रिकॉर्ड चाहिए; एकल-स्रोत परिणाम खोजात्मक और अप्रमाणित रहते हैं।", "अद्याप वापरण्यायोग्य प्रकाशित इतिहास नाही. उमेदवारांसाठी किमान 5 आधीच्या वैध नोंदी आवश्यक आहेत; एक-स्रोत निकाल शोधात्मक व अपडताळलेले राहतात."))
                 } else {
-                    candidateSets.forEach { (open, close, jodi) ->
-                        CandidateResearchCard(open, close, jodi)
+                    candidateSets.forEach { (exploratoryOpen, exploratoryClose, exploratoryJodi) ->
+                        val verified = verifiedCandidateSets.firstOrNull {
+                            it.first.market == exploratoryOpen.market && it.first.sessionId == exploratoryOpen.sessionId
+                        }
+                        CandidateResearchCard(
+                            verified = verified,
+                            exploratory = Triple(exploratoryOpen, exploratoryClose, exploratoryJodi)
+                        )
                     }
                 }
                 Text(uiText(uiLanguage, "Candidate walk-forward backtest · chronological", "कैंडिडेट वॉक-फॉरवर्ड बैकटेस्ट · तारीख क्रम", "कॅन्डिडेट वॉक-फॉरवर्ड बॅकटेस्ट · कालक्रमानुसार"), style = MaterialTheme.typography.titleLarge)
@@ -1810,63 +1817,62 @@ private fun SourceGroupCard(group: com.relab.core.ReconciliationGroup) {
 
 @Composable
 private fun CandidateResearchCard(
-    open: com.relab.core.CandidateRanking,
-    close: com.relab.core.CandidateRanking,
-    jodi: List<com.relab.core.JodiCandidate>
+    verified: Triple<com.relab.core.CandidateRanking, com.relab.core.CandidateRanking, List<com.relab.core.JodiCandidate>>?,
+    exploratory: Triple<com.relab.core.CandidateRanking, com.relab.core.CandidateRanking, List<com.relab.core.JodiCandidate>>
 ) {
     fun pct(count: Int, total: Int): String =
         if (total <= 0) "—" else "${"%.1f".format(count * 100.0 / total)}%"
 
     @Composable
-    fun candidateRows(title: String, ranking: com.relab.core.CandidateRanking) {
-        Text(title, style = MaterialTheme.typography.titleSmall)
-        ranking.candidates.take(5).forEachIndexed { index, candidate ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("${index + 1}. ${candidate.panna} · ${candidate.pannaType}", style = MaterialTheme.typography.bodyMedium)
-                Text("Exact ${pct(candidate.exactHistoricalCount, ranking.trainingRecords)}", style = MaterialTheme.typography.bodySmall)
+    fun rankingSection(
+        label: String,
+        status: String,
+        open: com.relab.core.CandidateRanking,
+        close: com.relab.core.CandidateRanking,
+        jodi: List<com.relab.core.JodiCandidate>
+    ) {
+        Text(label, style = MaterialTheme.typography.titleSmall)
+        Text(status, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Earlier rows: ${open.trainingRecords} · minimum: ${open.minimumHistoryRequired} · target: ${open.targetDate}", style = MaterialTheme.typography.bodySmall)
+        if (open.abstained || close.abstained) {
+            Text("OPEN: ${open.note}", style = MaterialTheme.typography.bodySmall)
+            Text("CLOSE: ${close.note}", style = MaterialTheme.typography.bodySmall)
+        } else {
+            listOf("Open Panna" to open, "Close Panna" to close).forEach { (title, ranking) ->
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                ranking.candidates.take(5).forEachIndexed { index, candidate ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${index + 1}. ${candidate.panna} · ${candidate.pannaType}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Exact ${pct(candidate.exactHistoricalCount, ranking.trainingRecords)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Family ${pct(candidate.familyHistoricalCount, ranking.trainingRecords)} · weekday ${candidate.weekdayFamilyCount} · transition ${candidate.previousFamilyTransitionCount}", style = MaterialTheme.typography.labelSmall)
+                }
             }
-            Text(
-                "Family ${pct(candidate.familyHistoricalCount, ranking.trainingRecords)} · weekday ${candidate.weekdayFamilyCount} · transition ${candidate.previousFamilyTransitionCount}",
-                style = MaterialTheme.typography.labelSmall
-            )
+            Text("Derived Jodi · relative evidence index (not probability)", style = MaterialTheme.typography.titleSmall)
+            jodi.take(5).forEachIndexed { index, item ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${index + 1}. ${item.jodi}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Index ${"%.1f".format(item.score)}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 
     Card {
-        Column(
-            Modifier.fillMaxWidth().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Text("${open.market} · ${open.sessionId}", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Earlier records: ${open.trainingRecords} · Target: ${open.targetDate}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                "Exploratory ranking may include unverified single-source rows; not consensus-only. No candidate-level walk-forward hit rate is claimed.",
-                style = MaterialTheme.typography.labelSmall
-            )
-            if (open.abstained || close.abstained) {
-                Text(open.note)
-                Text(close.note)
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Text("${exploratory.first.market} · ${exploratory.first.sessionId}", style = MaterialTheme.typography.titleMedium)
+            if (verified != null) {
+                rankingSection("VERIFIED RESEARCH", "CONSENSUS ONLY · independent-source reconciliation required", verified.first, verified.second, verified.third)
             } else {
-                candidateRows("Open Panna · historical frequency", open)
-                candidateRows("Close Panna · historical frequency", close)
-                Text("Derived Jodi · relative evidence rank", style = MaterialTheme.typography.titleSmall)
-                jodi.take(5).forEachIndexed { index, candidate ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${index + 1}. ${candidate.jodi}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Index ${"%.1f".format(candidate.score)}", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-                Text(
-                    "Exact % = exact panna count ÷ earlier records. Family % uses digit-family matches. Jodi index is not a probability.",
-                    style = MaterialTheme.typography.labelSmall
-                )
+                Text("VERIFIED RESEARCH · No consensus ranking available.", style = MaterialTheme.typography.titleSmall)
             }
+            androidx.compose.material3.HorizontalDivider()
+            rankingSection(
+                "EXPLORATORY RESEARCH",
+                "PROVISIONAL · may include single-source imported rows; never counted as verified consensus.",
+                exploratory.first, exploratory.second, exploratory.third
+            )
+            Text("Scores are relative evidence indexes, not probabilities or guarantees. Verified and exploratory histories are calculated separately.", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
