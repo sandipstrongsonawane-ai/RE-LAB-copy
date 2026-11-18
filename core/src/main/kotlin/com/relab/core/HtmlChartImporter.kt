@@ -151,7 +151,9 @@ object HtmlChartImporter {
                 return@forEachIndexed
             }
             val result = "${match.groupValues[1]}-${match.groupValues[2]}-${match.groupValues[3]}"
-            val status = validateResult(result, market, date, host, retrievedAt, sessionId)
+            val status = if (date.dayOfWeek !in market.activeDays) {
+                ObservationStatus.OUTSIDE_MARKET_CALENDAR
+            } else validateResult(result, market, date, host, retrievedAt, sessionId)
             observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, raw, result.takeIf { status == ObservationStatus.PUBLISHED }, status)
             if (status == ObservationStatus.MALFORMED) issues += "Table row ${index + 1}: Panna/Jodi validation failed ($result)"
         }
