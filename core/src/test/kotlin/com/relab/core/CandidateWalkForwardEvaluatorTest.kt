@@ -38,6 +38,9 @@ class CandidateWalkForwardEvaluatorTest {
         assertEquals(4, report.evaluatedDates)
         assertEquals(5, report.insufficientHistoryDates)
         assertEquals(report.evaluatedDates * 10, report.candidates.sumOf { it.selectedCount })
+        assertEquals(report.baselineMetrics, report.learningEnabledMetrics)
+        assertEquals(9, report.feedbackAvailability.size)
+        assertTrue(report.feedbackAvailability.all { it.verifiedPredictionsAvailable == 0 })
     }
 
     @Test fun futureRowsCannotChangeEarlierEvaluationWindow() {
@@ -137,6 +140,33 @@ class CandidateWalkForwardEvaluatorTest {
             minimumHistory = 5, topN = 10, learningLedger = ledger
         )
         assertEquals(4, report.evaluatedDates)
+    }
+
+
+    @Test fun reportsBaselineVersusLearningAndOnlyEarlierVerifiedFeedbackPerTarget() {
+        val prior = LockedSidePrediction(
+            Market.SRIDEVI, "main", LocalDate.parse("2026-10-01"), PannaSide.OPEN,
+            listOf("123"), 12, Instant.parse("2026-09-30T00:00:00Z"), "historical locked pick"
+        )
+        val verifiedBeforeNov8 = PredictionVerification(
+            prior.id, PredictionGrade.GREEN, "123", "07", 1,
+            Instant.parse("2026-11-07T18:00:00Z"), ReconciliationState.CONSENSUS,
+            "verified before Nov 8"
+        )
+        val ledger = PredictionLearningLedger(listOf(prior), listOf(verifiedBeforeNov8))
+        val report = CandidateWalkForwardEvaluator.evaluate(
+            observations(), Market.SRIDEVI, "main", PannaSide.OPEN,
+            minimumHistory = 5, topN = 10, learningLedger = ledger
+        )
+
+        assertEquals(4, report.baselineMetrics.evaluatedDates)
+        assertEquals(4, report.learningEnabledMetrics.evaluatedDates)
+        assertEquals(9, report.feedbackAvailability.size)
+        assertEquals(0, report.feedbackAvailability.single { it.targetDate == LocalDate.parse("2026-11-07") }.verifiedPredictionsAvailable)
+        assertEquals(1, report.feedbackAvailability.single { it.targetDate == LocalDate.parse("2026-11-08") }.verifiedPredictionsAvailable)
+        assertEquals(1, report.feedbackAvailability.single { it.targetDate == LocalDate.parse("2026-11-09") }.verifiedPredictionsAvailable)
+        assertEquals(report.learningEnabledMetrics.top1Hits, report.top1Hits)
+        assertEquals(report.learningEnabledMetrics.top3Hits, report.top3Hits)
     }
 
     @Test fun reportsCandidateExposureAndExactHitsSeparately() {
