@@ -17,6 +17,7 @@ internal data class DashboardAnalytics(
     val patternAnalyses: List<MarketAnalysis>,
     val intelligenceReports: List<MarketIntelligenceReport>,
     val crossMarketReport: CrossMarketReverseEngineeringReport,
+    val regimeChangeFindings: List<RegimeChangeFinding>,
     val candidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
     val sangamResearchSets: List<SangamResearchSet>,
     val sangamWalkForwardReports: List<SangamWalkForwardReport>,
@@ -63,6 +64,11 @@ internal data class DashboardAnalytics(
             val intelligenceReports = MarketIntelligence.analyze(researchRecords)
             val crossMarketReport = CrossMarketReverseEngineering.analyze(
                 researchRecords, minimumOverlap = 20, maxLagDays = 1, permutations = 99
+            )
+            // Use validated multi-source consensus rows for regime monitoring; never
+            // let exploratory single-source rows trigger a regime-shift flag.
+            val regimeChangeFindings = MarketRegimeChangeDetector.analyze(
+                chartBuild.records, windowSize = 20, permutations = 499
             )
 
             // Build a home card for every observed or enabled market/session,
@@ -198,6 +204,7 @@ internal data class DashboardAnalytics(
                 patternAnalyses = patternAnalyses,
                 intelligenceReports = intelligenceReports,
                 crossMarketReport = crossMarketReport,
+                regimeChangeFindings = regimeChangeFindings,
                 candidateSets = candidateSets,
                 sangamResearchSets = sangamResearchSets,
                 sangamWalkForwardReports = sangamWalkForwardReports,
