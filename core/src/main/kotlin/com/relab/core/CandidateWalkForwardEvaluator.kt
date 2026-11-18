@@ -49,7 +49,8 @@ object CandidateWalkForwardEvaluator {
         topN: Int = 10,
         allowSingleSourceExploration: Boolean = false,
         startDateInclusive: LocalDate? = null,
-        endDateExclusive: LocalDate? = null
+        endDateExclusive: LocalDate? = null,
+        learningLedger: PredictionLearningLedger = PredictionLearningLedger()
     ): CandidateWalkForwardReport {
         require(sessionId.isNotBlank()) { "Session ID is required" }
         require(minimumHistory >= 1) { "Minimum history must be at least 1" }
@@ -98,7 +99,8 @@ object CandidateWalkForwardEvaluator {
                 targetDate = actual.date,
                 side = side,
                 limit = topN,
-                minimumHistory = minimumHistory
+                minimumHistory = minimumHistory,
+                learningLedger = learningLedger
             )
             if (!ranking.abstained) {
                 evaluated++
