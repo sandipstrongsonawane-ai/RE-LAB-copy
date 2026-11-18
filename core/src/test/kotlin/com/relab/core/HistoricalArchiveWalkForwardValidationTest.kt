@@ -117,8 +117,8 @@ class HistoricalArchiveWalkForwardValidationTest {
                 sourceId = source,
                 sourceUrl = "historical-fixture-only",
                 retrievedAt = Instant.parse("2026-11-18T00:00:00Z"),
-                rawText = "999-87-888",
-                normalizedResult = "999-87-888",
+                rawText = "999-74-888",
+                normalizedResult = "999-74-888",
                 status = ObservationStatus.PUBLISHED
             )
         }
