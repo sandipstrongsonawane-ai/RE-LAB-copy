@@ -12,7 +12,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         val html = """
             <table>
               <tr><th>Week Range</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th><th>Sunday</th></tr>
-              <tr><td>16-11-2026 to 22-11-2026</td><td>12365456</td><td>23498567</td><td>34521789</td><td>45656890</td><td>56787012</td><td>67810012</td><td>78943012</td></tr>
+              <tr><td>16-11-2026 to 22-11-2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
             </table>
         """.trimIndent()
         val url = "https://charts.example.org/market/sridevi"
