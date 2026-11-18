@@ -19,7 +19,15 @@ object ResearchBundleExporter {
         crossMarketReport: CrossMarketReverseEngineeringReport? = null,
         candidateWalkForwardReports: List<CandidateWalkForwardReport> = emptyList(),
         regimeChangeFindings: List<RegimeChangeFinding> = emptyList(),
-        weekdayPatternFindings: List<WeekdayPatternFinding> = emptyList()
+        weekdayPatternFindings: List<WeekdayPatternFinding> = emptyList(),
+        intelligenceReports: List<MarketIntelligenceReport> = emptyList(),
+        candidateSets: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>> = emptyList(),
+        sangamResearchSets: List<SangamResearchSet> = emptyList(),
+        sangamWalkForwardReports: List<SangamWalkForwardReport> = emptyList(),
+        selfLearningReports: List<HypothesisDiscoveryReport> = emptyList(),
+        publisherCoverageReports: List<PublisherCoverageReport> = emptyList(),
+        repeatedSourceRecords: List<DuplicateObservationGroup> = emptyList(),
+        repeatedPublishedResults: List<RepeatedPublishedResultGroup> = emptyList()
     ): ByteArray {
         val artifacts = linkedMapOf(
             "source-observations.csv" to SourceCsvExporter.export(observations),
@@ -29,6 +37,7 @@ object ResearchBundleExporter {
             "candidate-walk-forward-audit.csv" to CandidateWalkForwardCsvExporter.export(candidateWalkForwardReports),
             "market-regime-change-audit.csv" to MarketRegimeChangeCsvExporter.export(regimeChangeFindings),
             "weekday-pattern-audit.csv" to WeekdayPatternCsvExporter.export(weekdayPatternFindings),
+            "research-findings.txt" to findingsSummary(intelligenceReports, candidateSets, sangamResearchSets, sangamWalkForwardReports, selfLearningReports, publisherCoverageReports, repeatedSourceRecords, repeatedPublishedResults),
             "historical-coverage-audit.csv" to CoverageCsvExporter.export(coverageReports),
             "source-publication-timing.csv" to SourceTimingAnalytics.exportCsv(observations),
             "prediction-learning-ledger.csv" to PredictionLedgerCsvCodec.export(predictionLedger),
@@ -83,6 +92,7 @@ object ResearchBundleExporter {
         appendLine("- candidate-walk-forward-audit.csv: chronological strict-consensus and explicitly exploratory baseline/learning metrics")
         appendLine("- market-regime-change-audit.csv: recent-vs-previous window distribution shifts with permutation p-values and within-session q-values")
         appendLine("- weekday-pattern-audit.csv: weekday-feature association findings, minimum-history abstentions, permutation p-values and within-session q-values")
+        appendLine("- research-findings.txt: complete serialized findings for market intelligence, ranked candidates, Sangam research/backtests, self-learning hypotheses, publisher coverage and duplicate audits")
         appendLine("- historical-coverage-audit.csv: expected-day coverage states")
         appendLine("- source-publication-timing.csv: explicit publication-to-capture timing")
         appendLine("- prediction-learning-ledger.csv: frozen candidates and append-only GREEN/RED/GREY verification attempts")
@@ -95,6 +105,33 @@ object ResearchBundleExporter {
         appendLine("Regime-change flags compare the latest two equal windows in strict consensus records; they describe historical distribution change, not future outcomes.")
         appendLine("Candidate walk-forward scoring uses only strictly earlier chart records and verified feedback available before each target-day UTC midnight.")
         appendLine("Walk-forward outputs are historical baseline evaluations, not guaranteed predictions.")
+    }
+
+    private fun findingsSummary(
+        intelligence: List<MarketIntelligenceReport>,
+        candidates: List<Triple<CandidateRanking, CandidateRanking, List<JodiCandidate>>>,
+        sangam: List<SangamResearchSet>,
+        sangamBacktests: List<SangamWalkForwardReport>,
+        hypotheses: List<HypothesisDiscoveryReport>,
+        publisherCoverage: List<PublisherCoverageReport>,
+        repeatedSources: List<DuplicateObservationGroup>,
+        repeatedPublished: List<RepeatedPublishedResultGroup>
+    ): String = buildString {
+        appendLine("RE-LAB complete research findings")
+        appendLine("This file preserves the full data-class representation for every computed finding.")
+        fun group(name: String, values: List<Any>) {
+            appendLine()
+            appendLine("[$name] count=${values.size}")
+            values.forEachIndexed { index, value -> appendLine("${index + 1}. $value") }
+        }
+        group("market-intelligence", intelligence)
+        group("ranked-open-close-jodi-candidates", candidates)
+        group("sangam-research", sangam)
+        group("sangam-walk-forward", sangamBacktests)
+        group("self-learning-hypotheses", hypotheses)
+        group("publisher-coverage", publisherCoverage)
+        group("repeated-source-record-audit", repeatedSources)
+        group("repeated-published-result-audit", repeatedPublished)
     }
 
     private fun sha256(bytes: ByteArray): String =
