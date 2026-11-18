@@ -426,6 +426,28 @@ private fun RelabHome(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (linkBusy) "Fetching..." else "Auto-detect market & fetch") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        enabled = !linkBusy,
+                        onClick = {
+                            refreshRegisteredSources(
+                                com.relab.core.Market.SRIDEVI, onSaveLinkObservations,
+                                { observations = it }, { importMessage = it }, { linkBusy = it }
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Refresh Sridevi sources") }
+                    OutlinedButton(
+                        enabled = !linkBusy,
+                        onClick = {
+                            refreshRegisteredSources(
+                                com.relab.core.Market.KALYAN, onSaveLinkObservations,
+                                { observations = it }, { importMessage = it }, { linkBusy = it }
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Refresh Kalyan sources") }
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { picker.launch(arrayOf("text/*", "text/csv", "application/csv")) }) {
@@ -1002,6 +1024,71 @@ private fun importChartLink(
         } catch (error: Exception) {
             mainHandler.post {
                 updateMessage("Link import failed: ${error.message ?: "Unknown error"}")
+                updateBusy(false)
+            }
+        }
+    }.start()
+}
+
+private fun refreshRegisteredSources(
+    market: com.relab.core.Market,
+    save: (List<com.relab.core.SourceObservation>) -> List<com.relab.core.SourceObservation>,
+    updateObservations: (List<com.relab.core.SourceObservation>) -> Unit,
+    updateMessage: (String) -> Unit,
+    updateBusy: (Boolean) -> Unit
+) {
+    val sources = com.relab.core.MarketSourceCatalog.enabledFor(market, "main")
+    val mainHandler = Handler(Looper.getMainLooper())
+    if (sources.isEmpty()) {
+        updateMessage("No enabled registered sources for ${market.name}/main.")
+        return
+    }
+    updateBusy(true)
+    updateMessage("Refreshing ${sources.size} registered ${market.name} publishers sequentially…")
+    Thread {
+        val report = com.relab.core.MarketSourceRefreshEngine.refresh(sources) { source ->
+            val connection = URL(source.url).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 15000
+            connection.readTimeout = 20000
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("User-Agent", "RE-LAB-Android/0.1")
+            connection.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+            try {
+                val code = connection.responseCode
+                require(code in 200..299) { "HTTP $code" }
+                val contentType = connection.contentType.orEmpty().lowercase()
+                require(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.isBlank()) {
+                    "Unexpected content type: $contentType"
+                }
+                val bytes = connection.inputStream.use { readBoundedBytes(it, 8_000_000L) }
+                com.relab.core.FetchedChartPage(bytes.toString(Charsets.UTF_8), connection.url.toString())
+            } finally {
+                connection.disconnect()
+            }
+        }
+        mainHandler.post {
+            try {
+                val extracted = report.observations
+                if (extracted.isNotEmpty()) {
+                    val merged = save(extracted)
+                    updateObservations(merged)
+                }
+                val detail = report.outcomes.joinToString(" | ") { outcome ->
+                    val name = outcome.source.sourceId
+                    when {
+                        outcome.errorMessage != null -> "$name: FAILED (${outcome.errorMessage})"
+                        outcome.observations.isEmpty() -> "$name: fetched, 0 rows parsed; skipped ${outcome.skippedRows}"
+                        else -> "$name: ${outcome.observations.size} rows; malformed/issues ${outcome.issues.size}; skipped ${outcome.skippedRows}"
+                    }
+                }
+                updateMessage(
+                    "${market.name}: ${report.successfulSources}/${report.outcomes.size} sources fetched; " +
+                        "${extracted.size} observations extracted. $detail"
+                )
+            } catch (error: Exception) {
+                updateMessage("Refresh save failed: ${error.message ?: "Unknown error"}")
+            } finally {
                 updateBusy(false)
             }
         }
