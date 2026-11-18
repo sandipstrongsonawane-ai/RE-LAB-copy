@@ -97,4 +97,41 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertEquals("livesattamatka.org", monday.sourceId)
     }
 
+
+    @Test fun supportsWeekdayColumnsThatWrapAcrossSundayToMonday() {
+        val html = """
+            <table>
+              <tr><th>Week</th><th>Sunday</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr>
+              <tr><td>15/11/2026 to 21/11/2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+            </table>
+        """.trimIndent()
+        val url = "https://publisher.example/history/sridevi"
+        assertTrue(GenericWeeklyMatrixParserAdapter.supports(html, url))
+        val parsed = GenericWeeklyMatrixParserAdapter.parse(
+            html, url, Market.SRIDEVI, "main", retrievedAt
+        )
+        assertEquals(7, parsed.observations.size)
+        assertEquals("123-65-456", parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-15")
+        }.normalizedResult)
+        assertEquals("234-98-567", parsed.observations.single {
+            it.date == LocalDate.parse("2026-11-16")
+        }.normalizedResult)
+    }
+
+    @Test fun rejectsWrappedWeekdayHeaderWhenDateRangeStartsOnDifferentWeekday() {
+        val html = """
+            <table>
+              <tr><th>Week</th><th>Sunday</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr>
+              <tr><td>16/11/2026 to 22/11/2026</td><td>12365456</td><td>23498567</td><td>34524789</td><td>45657890</td><td>56783012</td><td>67813012</td><td>78943012</td></tr>
+            </table>
+        """.trimIndent()
+        assertTrue(GenericWeeklyMatrixParserAdapter.supports(html, "https://publisher.example/chart"))
+        val parsed = GenericWeeklyMatrixParserAdapter.parse(
+            html, "https://publisher.example/chart", Market.SRIDEVI, "main", retrievedAt
+        )
+        assertTrue(parsed.observations.isEmpty())
+        assertEquals(1, parsed.skippedRows)
+    }
+
 }
