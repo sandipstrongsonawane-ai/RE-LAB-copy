@@ -207,6 +207,26 @@ object MarketSourceCatalog {
             "https://kalyanchart.cyou/history/", "archive",
             enabled = false,
             note = "Archive contains multiple sessions; exact Kalyan evening page must be verified before automated collection."
+        ),
+        // Newly discovered historical archives. They remain disabled until the app
+        // captures raw HTML, validates a parser fixture, and audits publisher identity.
+        MarketSource(
+            Market.SRIDEVI, "main", "matkapulse",
+            "https://matkapulse.com/sridevi-panel-chart", "weekly-panel",
+            enabled = false,
+            note = "Claims 26 Feb 2018 onward. Recent rows overlap exactly with PlayMatka; treat as potentially mirrored/common-feed, not independent evidence, until publisher provenance is audited."
+        ),
+        MarketSource(
+            Market.SRIDEVI, "main", "playmatka",
+            "https://playmatka.live/panel-chart/sridevi", "weekly-panel",
+            enabled = false,
+            note = "Claims 2018-2026 coverage. Recent rows overlap exactly with MatkaPulse; possible mirror/common-feed. Keep disabled pending raw HTML fixture and publisher-identity audit."
+        ),
+        MarketSource(
+            Market.KALYAN, "main", "matkafun",
+            "https://matka-fun.co/panel/game12/kalyan", "weekly-panel",
+            enabled = false,
+            note = "Search-indexed weekly Kalyan archive shows rows from Dec 2024 onward; raw HTML, session calendar, and parser fixture not yet audited."
         )
     )
 
