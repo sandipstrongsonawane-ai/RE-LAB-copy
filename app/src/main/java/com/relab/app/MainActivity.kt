@@ -929,7 +929,8 @@ private fun RelabHome(
                         HomeReverseEngineeringCard(
                             analysis = patternAnalyses.firstOrNull { it.market == market && it.sessionId == sessionId },
                             intelligence = intelligenceReports.firstOrNull { it.market == market && it.sessionId == sessionId },
-                            hypotheses = selfLearningReports.filter { it.market == market && it.sessionId == sessionId }
+                            hypotheses = selfLearningReports.filter { it.market == market && it.sessionId == sessionId },
+                            uiLanguage = uiLanguage
                         )
                     }
                 }
@@ -1286,7 +1287,8 @@ private fun MarketNextInsightCard(
 private fun HomeReverseEngineeringCard(
     analysis: MarketAnalysis?,
     intelligence: com.relab.core.MarketIntelligenceReport?,
-    hypotheses: List<com.relab.core.HypothesisDiscoveryReport>
+    hypotheses: List<com.relab.core.HypothesisDiscoveryReport>,
+    uiLanguage: String
 ) {
     if (analysis == null) return
     fun topCounts(items: List<com.relab.core.PatternCount>, limit: Int = 3): String =
@@ -1323,10 +1325,22 @@ private fun HomeReverseEngineeringCard(
         .take(2)
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("${researchPeriod(analysis.market, analysis.sessionId)} MARKET · REVERSE-ENGINEERING · ${analysis.market} / ${analysis.sessionId}", style = MaterialTheme.typography.titleMedium)
-            Text("Dataset: ${analysis.acceptedRecords} valid rows · ${analysis.rejectedRecords} rejected", style = MaterialTheme.typography.bodySmall)
-            Text("1) Family transition · Open: ${topCounts(analysis.openFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
-            Text("   Close: ${topCounts(analysis.closeFamilySequences, 2)}", style = MaterialTheme.typography.bodySmall)
+            Text(
+                "${researchPeriod(analysis.market, analysis.sessionId)} MARKET · ${uiText(uiLanguage, "REVERSE-ENGINEERING", "रिवर्स इंजीनियरिंग", "रिव्हर्स इंजिनिअरिंग")} · ${analysis.market} / ${analysis.sessionId}",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                uiText(uiLanguage, "Data: ", "डेटा: ", "डेटा: ") + "${analysis.acceptedRecords} " +
+                    uiText(uiLanguage, "valid rows · ", "सही रिकॉर्ड · ", "वैध नोंदी · ") + "${analysis.rejectedRecords} " +
+                    uiText(uiLanguage, "rejected", "खारिज", "नाकारले"),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                uiText(uiLanguage, "1) Family sequence · Open: ", "1) फैमिली क्रम · ओपन: ", "1) फॅमिली क्रम · ओपन: ") +
+                    topCounts(analysis.openFamilySequences, 2),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(uiText(uiLanguage, "   Close: ", "   क्लोज: ", "   क्लोज: ") + topCounts(analysis.closeFamilySequences, 2), style = MaterialTheme.typography.bodySmall)
             val familyLabels = listOf("0/5", "1/6", "2/7", "3/8", "4/9")
             @Composable fun TransitionMatrix(title: String, matrix: List<List<Int>>) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1340,9 +1354,22 @@ private fun HomeReverseEngineeringCard(
             TransitionMatrix("Open family transition matrix · previous row → next row", analysis.openFamilyDigitTransitions)
             TransitionMatrix("Close family transition matrix · previous row → next row", analysis.closeFamilyDigitTransitions)
             Text("Counts combine transitions at all 3 digit positions between consecutive valid dates. They are counts, not probabilities.", style = MaterialTheme.typography.labelSmall)
-            Text("Panna-family sequence transitions · Open: ${topSequenceTransitions(analysis.openPannaFamilyTransitions)}", style = MaterialTheme.typography.bodySmall)
-            Text("Panna-family sequence transitions · Close: ${topSequenceTransitions(analysis.closePannaFamilyTransitions)}", style = MaterialTheme.typography.bodySmall)
-            Text("Each item is previous 3-position family sequence → next sequence; counts only, observed transitions only.", style = MaterialTheme.typography.labelSmall)
+            Text(
+                uiText(uiLanguage, "Panna-family sequence · Open: ", "पन्ना फैमिली क्रम · ओपन: ", "पन्ना फॅमिली क्रम · ओपन: ") +
+                    topSequenceTransitions(analysis.openPannaFamilyTransitions),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                uiText(uiLanguage, "Panna-family sequence · Close: ", "पन्ना फैमिली क्रम · क्लोज: ", "पन्ना फॅमिली क्रम · क्लोज: ") +
+                    topSequenceTransitions(analysis.closePannaFamilyTransitions),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                uiText(uiLanguage, "Old 3-position family sequence → next sequence; counts only, observed transitions only.",
+                    "पुराना 3-अंक फैमिली क्रम → अगला क्रम; सिर्फ गिनती, केवल मिले हुए बदलाव।",
+                    "जुना 3-अंक फॅमिली क्रम → पुढील क्रम; फक्त मोजणी, नोंदलेले बदलच."),
+                style = MaterialTheme.typography.labelSmall
+            )
             Text("2) Weekday pattern · ${topWeekday(analysis.openWeekdayCounts)}", style = MaterialTheme.typography.bodySmall)
             Text("3) Ank frequency · Open: ${topCounts(analysis.openAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
             Text("   Close: ${topCounts(analysis.closeAnkCounts, 3)}", style = MaterialTheme.typography.bodySmall)
