@@ -98,4 +98,57 @@ class LocalObservationDatabaseInstrumentedTest {
         }
         context.deleteDatabase("relab_local_history.db")
     }
+    @Test
+    fun versionOneDatabaseMigratesWithoutDroppingObservationHistory() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("relab_local_history.db")
+        val path = context.getDatabasePath("relab_local_history.db")
+        path.parentFile?.mkdirs()
+        val old = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(path, null)
+        old.execSQL(
+            """CREATE TABLE source_observations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                market TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                chart_date TEXT NOT NULL,
+                source_id TEXT NOT NULL,
+                source_record_id TEXT,
+                source_url TEXT,
+                retrieved_at TEXT NOT NULL,
+                published_at TEXT,
+                raw_text TEXT NOT NULL,
+                normalized_result TEXT,
+                status TEXT NOT NULL
+            )"""
+        )
+        old.execSQL("""CREATE TABLE app_metadata (
+            metadata_key TEXT PRIMARY KEY NOT NULL,
+            metadata_value TEXT NOT NULL
+        )""")
+        old.execSQL(
+            """INSERT INTO source_observations
+            (market, session_id, chart_date, source_id, source_record_id, source_url,
+             retrieved_at, published_at, raw_text, normalized_result, status)
+            VALUES ('SRIDEVI', 'main', '2026-11-16', 'old.publisher', 'legacy-1',
+             'https://old.publisher/chart', '2026-11-16T12:00:00Z', NULL,
+             'legacy raw cell', NULL, 'MISSING_FROM_SOURCE')"""
+        )
+        old.version = 1
+        old.close()
+
+        LocalObservationDatabase(context).use { migrated ->
+            val observations = migrated.loadObservations()
+            assertEquals(1, observations.size)
+            assertEquals("legacy raw cell", observations.single().rawText)
+            val tables = migrated.readableDatabase.rawQuery(
+                "SELECT name FROM sqlite_master WHERE type='table'", null
+            ).use { cursor ->
+                buildSet { while (cursor.moveToNext()) add(cursor.getString(0)) }
+            }
+            assertEquals(true, "locked_predictions" in tables)
+            assertEquals(true, "prediction_verification_attempts" in tables)
+        }
+        context.deleteDatabase("relab_local_history.db")
+    }
+
 }
