@@ -164,9 +164,15 @@ object PredictionLearningCycle {
     ): Pair<PredictionLearningLedger, PredictionVerification> {
         val prediction = ledger.lockedPredictions.singleOrNull { it.id == predictionId }
             ?: throw IllegalArgumentException("Unknown locked prediction.")
-        // Each check is appended as a new immutable attempt. A GREY attempt can be
-        // superseded by a later consensus check without rewriting prior evidence.
+        // GREY is provisional and may be rechecked; GREEN and RED are terminal.
+        val latest = ledger.verifications
+            .filter { it.predictionId == predictionId }
+            .maxByOrNull { it.attempt }
+        require(latest == null || latest.grade == PredictionGrade.GREY) {
+            "Prediction already has a terminal GREEN/RED grade; it cannot be reverified."
+        }
 
+        // Each permitted check is appended as a new immutable attempt.
         val group = SourceReconciliation.reconcile(observations).singleOrNull {
             it.market == prediction.market && it.sessionId == prediction.sessionId &&
                 it.date == prediction.targetDate
