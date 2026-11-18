@@ -110,6 +110,7 @@ object SourceCsvImporter {
         val row = mutableListOf<String>()
         val field = StringBuilder()
         var quoted = false
+        var closedQuote = false
         var i = 0
         while (i < input.length) {
             val c = input[i]
@@ -119,26 +120,36 @@ object SourceCsvImporter {
                         field.append('"')
                         i++
                     }
-                    c == '"' -> quoted = false
+                    c == '"' -> {
+                        quoted = false
+                        closedQuote = true
+                    }
                     else -> field.append(c)
                 }
             } else {
                 when (c) {
                     '"' -> {
-                        require(field.isEmpty()) { "Quote inside unquoted field" }
+                        require(field.isEmpty() && !closedQuote) { "Quote inside unquoted field" }
                         quoted = true
                     }
                     ',' -> {
                         row += field.toString()
                         field.setLength(0)
+                        closedQuote = false
                     }
                     '\n' -> {
                         row += field.toString().removeSuffix("\r")
                         field.setLength(0)
+                        closedQuote = false
                         if (row.any { it.isNotEmpty() }) rows += row.toList()
                         row.clear()
                     }
-                    else -> field.append(c)
+                    else -> {
+                        require(!closedQuote) {
+                            "Unexpected character after closing quote at position $i"
+                        }
+                        field.append(c)
+                    }
                 }
             }
             i++
