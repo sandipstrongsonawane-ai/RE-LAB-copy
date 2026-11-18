@@ -145,10 +145,14 @@ object SourceCsvImporter {
                         row.clear()
                     }
                     else -> {
-                        require(!closedQuote) {
-                            "Unexpected character after closing quote at position $i"
+                        val crlfAfterQuote = closedQuote && c == '\r' &&
+                            i + 1 < input.length && input[i + 1] == '\n'
+                        if (!crlfAfterQuote) {
+                            require(!closedQuote) {
+                                "Unexpected character after closing quote at position $i"
+                            }
+                            field.append(c)
                         }
-                        field.append(c)
                     }
                 }
             }
