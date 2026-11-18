@@ -35,16 +35,16 @@ class SattaMatkaJodiThreeCellWeeklyParserAdapterTest {
             <table>
               <tr><th>Date</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th></tr>
               <tr><td>31/12/12 to 5/1/13</td>
-                <td>779</td><td>51</td><td>137</td><td>155</td><td>29</td><td>368</td>
-                <td>234</td><td>96</td><td>349</td><td>455</td><td>68</td><td>233</td>
-                <td>267</td><td>99</td><td>678</td><td>880</td><td>67</td><td>777</td>
+                <td>277</td><td>65</td><td>249</td><td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td><td>277</td><td>65</td><td>249</td>
+                <td>277</td><td>65</td><td>249</td><td>277</td><td>65</td><td>249</td>
               </tr>
             </table>
         """.trimIndent()
         assertTrue(SattaMatkaJodiThreeCellWeeklyParserAdapter.supports(html, url))
         val parsed = ChartParserRegistry.parse(html, url, Market.KALYAN, "main", at)
         assertEquals(6, parsed.observations.size)
-        assertTrue(parsed.observations.all { it.market == Market.KALYAN && it.sessionId == "main" })
+        assertTrue(parsed.observations.all { it.market == Market.KALYAN && it.sessionId == "main" && it.status == ObservationStatus.PUBLISHED })
     }
 
     @Test fun doesNotClaimUnrelatedHostsOrSingleCellWeeklyMatrices() {
