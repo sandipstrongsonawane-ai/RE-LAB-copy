@@ -123,7 +123,8 @@ object HtmlChartImporter {
             observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, raw, result.takeIf { status == ObservationStatus.PUBLISHED }, status)
             if (status == ObservationStatus.MALFORMED) issues += "Table row ${index + 1}: Panna/Jodi validation failed ($result)"
         }
-        return HtmlChartImportReport(observations.distinctBy { listOf(it.date, it.sourceId, it.rawText) }, skipped, issues)
+        // Preserve every extracted row. Repeated rows are evidence and must remain auditable.
+        return HtmlChartImportReport(observations, skipped, issues)
     }
 
     private fun validateResult(result: String, market: Market, date: LocalDate, host: String, at: Instant, session: String): ObservationStatus {
