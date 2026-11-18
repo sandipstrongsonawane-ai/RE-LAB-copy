@@ -36,9 +36,14 @@ internal data class DashboardAnalytics(
             val patternAnalyses = PatternAnalysis.analyze(researchRecords)
             val intelligenceReports = MarketIntelligence.analyze(researchRecords)
 
-            val candidateSets = researchRecords
-                .map { it.market to it.sessionId }
+            // Build a home card for every observed or enabled market/session,
+            // including markets with no history yet (they must visibly abstain).
+            val marketSessionKeys = (observations.map { it.market to it.sessionId } +
+                marketSources.filter { it.enabled }.map { it.market to it.sessionId })
                 .distinct()
+                .sortedWith(compareBy<Pair<Market, String>> { it.first.name }.thenBy { it.second })
+
+            val candidateSets = marketSessionKeys
                 .map { (market, sessionId) ->
                     val target = LocalDate.now()
                     val open = CandidateRankingEngine.rank(
