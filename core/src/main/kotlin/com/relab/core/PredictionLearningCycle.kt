@@ -145,7 +145,7 @@ object PredictionLearningCycle {
 
         val ranking = CandidateRankingEngine.rank(
             observations, market, sessionId, targetDate, side,
-            limit = limit, minimumHistory = minimumHistory
+            limit = limit, minimumHistory = minimumHistory, learningLedger = ledger
         )
         require(!ranking.abstained) { ranking.note }
         val prediction = LockedSidePrediction(
