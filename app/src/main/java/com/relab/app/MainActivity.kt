@@ -511,6 +511,7 @@ private fun RelabHome(
                         else OutlinedButton(onClick = { activeSection = key }, modifier = Modifier.weight(1f)) { Text(label) }
                     }
                 }
+                importMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 if (activeSection == "settings") {
                     Card {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -527,12 +528,12 @@ private fun RelabHome(
                     }
                 }
                 if (activeSection == "home") {
-                Text("RE-LAB", style = MaterialTheme.typography.headlineLarge)
-                Text("5 markets · Offline chart research", style = MaterialTheme.typography.titleMedium)
-                Text("Paste any supported chart URL. RE-LAB detects the market from its exact source path.")
+                Text(uiText(uiLanguage, "Quick start", "त्वरित शुरुआत", "जलद सुरुवात"), style = MaterialTheme.typography.titleMedium)
+                Text(uiText(uiLanguage, "5 markets · Offline chart research", "5 मार्केट · ऑफलाइन चार्ट रिसर्च", "5 मार्केट · ऑफलाइन चार्ट संशोधन"), style = MaterialTheme.typography.bodySmall)
+                Text(uiText(uiLanguage, "Paste a supported chart URL. RE-LAB detects the market from its source path.", "सपोर्टेड चार्ट URL डालें। RE-LAB सोर्स पाथ से मार्केट पहचानता है।", "समर्थित चार्ट URL पेस्ट करा. RE-LAB सोर्स पाथवरून मार्केट ओळखते."))
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Self-learning prediction ledger", style = MaterialTheme.typography.titleMedium)
+                        Text(uiText(uiLanguage, "Self-learning prediction ledger", "सेल्फ-लर्निंग प्रेडिक्शन रिकॉर्ड", "सेल्फ-लर्निंग प्रेडिक्शन नोंद"), style = MaterialTheme.typography.titleMedium)
                         Text("Locked: ${predictionLedger.lockedPredictions.size} · Verification attempts: ${predictionLedger.verifications.size}")
                         Text("GREEN/RED only count after independent publisher consensus. GREY checks remain provisional and can be rechecked when newer source evidence arrives.", style = MaterialTheme.typography.bodySmall)
                         predictionLedger.lockedPredictions.groupBy { Triple(it.market, it.sessionId, it.side) }.forEach { (key, _) ->
@@ -612,12 +613,12 @@ private fun RelabHome(
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text(if (linkBusy) "Fetching..." else "Auto-detect market & fetch") }
+                ) { Text(if (linkBusy) uiText(uiLanguage, "Fetching...", "फेच हो रहा है...", "फेच होत आहे...") else uiText(uiLanguage, "Auto-detect market & fetch", "मार्केट पहचानें और फेच करें", "मार्केट ओळखा आणि फेच करा")) }
                 if (activeSection == "sources") {
                 }
                 Card {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Unlimited chart source manager", style = MaterialTheme.typography.titleMedium)
+                        Text(uiText(uiLanguage, "Chart source manager", "चार्ट सोर्स मैनेजर", "चार्ट स्रोत व्यवस्थापक"), style = MaterialTheme.typography.titleMedium)
                         Text("Har saved URL ka apna source history rahega. Same publisher ke multiple pages ek hi evidence identity use karenge.")
                         OutlinedTextField(sourceUrlInput, { sourceUrlInput = it }, label = { Text("Chart URL (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(sourcePublisherInput, { sourcePublisherInput = it }, label = { Text("Publisher identity (same publisher ke pages par same naam)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -674,7 +675,7 @@ private fun RelabHome(
                                     refreshRegisteredSources(marketSources, onSaveLinkObservations, { observations = it }, { importMessage = it }, { linkBusy = it }, { statuses -> sourceStatuses = sourceStatuses + statuses; onSaveSourceStatuses(sourceStatuses) })
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Text(if (linkBusy) "Refreshing…" else "Refresh all sources") }
+                            ) { Text(if (linkBusy) uiText(uiLanguage, "Refreshing…", "रिफ्रेश हो रहा है…", "रिफ्रेश होत आहे…") else uiText(uiLanguage, "Refresh all sources", "सभी सोर्स रिफ्रेश करें", "सर्व स्रोत रिफ्रेश करा")) }
                         }
                         Text("Registered sources: ${marketSources.size} · Enabled: ${marketSources.count { it.enabled }}")
                         marketSources.forEach { source ->
@@ -713,21 +714,21 @@ private fun RelabHome(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { picker.launch(arrayOf("text/*", "text/csv", "application/csv")) }) {
-                            Text("Import CSV")
+                            Text(uiText(uiLanguage, "Import CSV", "CSV इम्पोर्ट", "CSV आयात"))
                         }
                         OutlinedButton(
                             onClick = { bundleValidationPicker.launch(arrayOf("application/zip", "application/octet-stream")) }
-                        ) { Text("Import verified bundle") }
+                        ) { Text(uiText(uiLanguage, "Import verified bundle", "वेरिफाइड बंडल इम्पोर्ट", "पडताळलेला बंडल आयात")) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = { bundleExportPicker.launch("relab-complete-research-bundle.zip") },
                             enabled = observations.isNotEmpty()
-                        ) { Text("Export complete bundle") }
+                        ) { Text(uiText(uiLanguage, "Export complete bundle", "पूरा बंडल एक्सपोर्ट", "पूर्ण बंडल एक्सपोर्ट")) }
                         OutlinedButton(
                             onClick = { exportPicker.launch("relab-source-backup.csv") },
                             enabled = observations.isNotEmpty()
-                        ) { Text("Export backup") }
+                        ) { Text(uiText(uiLanguage, "Export backup", "बैकअप एक्सपोर्ट", "बॅकअप एक्सपोर्ट")) }
                     }
                     OutlinedButton(onClick = {
                         rawCsv = null
@@ -767,7 +768,6 @@ private fun RelabHome(
                     ) { Text("Export source timing CSV") }
                 }
                 }
-                importMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 if (activeSection == "home") {
                 Card(colors = CardDefaults.cardColors()) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
