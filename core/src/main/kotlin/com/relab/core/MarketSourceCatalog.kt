@@ -67,26 +67,51 @@ object MarketSourceCatalog {
         MarketSource(
             Market.SRIDEVI, "main", "livesattamatka",
             "https://livesattamatka.net/panna-chart/sridevi", "weekly-panel",
-            enabled = false,
-            note = "Verified weekly panel layout; domain relationship to livesattamatka.org is unconfirmed, so grouped under the same publisher identity and disabled pending review."
+            enabled = true,
+            note = "Verified dated weekly panel archive; grouped with livesattamatka.org under one publisher identity to prevent duplicate corroboration."
         ),
         MarketSource(
             Market.KALYAN, "main", "livesattamatka",
             "https://livesattamatka.net/panna-chart/kalyan", "weekly-panel",
-            enabled = false,
-            note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
+            enabled = true,
+            note = "Verified dated weekly panel archive; grouped with livesattamatka.org under one publisher identity."
         ),
         MarketSource(
             Market.KALYAN_MORNING, "main", "livesattamatka",
             "https://livesattamatka.net/panna-chart/kalyan-morning", "weekly-panel",
-            enabled = false,
-            note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
+            enabled = true,
+            note = "Verified dated weekly panel archive; grouped with livesattamatka.org under one publisher identity."
         ),
         MarketSource(
             Market.valueOf("PUNA_BAZAR"), "main", "livesattamatka",
             "https://livesattamatka.net/panna-chart/puna-bazar", "weekly-panel",
-            enabled = false,
-            note = "Verified weekly panel layout; grouped with livesattamatka.org to avoid false independent corroboration."
+            enabled = true,
+            note = "Verified dated weekly panel archive; grouped with livesattamatka.org under one publisher identity."
+        ),
+        MarketSource(
+            Market.TIME_BAZAR, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/time-bazar", "weekly-panel",
+            note = "Verified weekly panel archive; Monday-Saturday calendar."
+        ),
+        MarketSource(
+            Market.MAIN_BAZAR, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/main-bazar", "weekly-panel",
+            note = "Verified weekly panel archive; Monday-Friday calendar."
+        ),
+        MarketSource(
+            Market.MAIN_BAZAR_NIGHT, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/main-bazar-night", "weekly-panel",
+            note = "Verified weekly panel archive; kept separate from Main Bazar day/night market identities."
+        ),
+        MarketSource(
+            Market.TIME_BAZAR_DAY, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/time-bazar-day", "weekly-panel",
+            note = "Verified weekly panel archive; distinct from Time Bazar."
+        ),
+        MarketSource(
+            Market.NEW_TIME_BAZAR, "main", "livesattamatka",
+            "https://livesattamatka.net/panna-chart/new-time-bazar", "weekly-panel",
+            note = "Verified weekly panel archive; Monday-Saturday calendar and distinct market identity."
         ),
         MarketSource(
             Market.KALYAN, "main", "kalyanchart",
