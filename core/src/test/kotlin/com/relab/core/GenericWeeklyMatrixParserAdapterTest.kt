@@ -262,7 +262,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         )
         assertEquals(7, timeBazar.observations.size)
         assertEquals("258-51-236", timeBazar.observations.first().normalizedResult)
-        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR, timeBazar.observations.last().status)
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE, timeBazar.observations.last().status)
         assertTrue(timeBazar.observations.all { it.sourceId == "livesattamatka.net" })
 
         val mainBazar = parse(
@@ -327,7 +327,7 @@ class GenericWeeklyMatrixParserAdapterTest {
         assertEquals("139-36-349", mainRatan.observations.single {
             it.date == LocalDate.parse("2026-09-16")
         }.normalizedResult)
-        assertEquals(ObservationStatus.OUTSIDE_MARKET_CALENDAR,
+        assertEquals(ObservationStatus.MISSING_FROM_SOURCE,
             mainRatan.observations.single { it.date == LocalDate.parse("2026-09-19") }.status)
 
         val sundayBazar = parse("sunday-bazar", Market.SUNDAY_BAZAR, "09/11 to 15/11 2026",

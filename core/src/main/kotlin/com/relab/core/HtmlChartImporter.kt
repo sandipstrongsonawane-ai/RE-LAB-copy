@@ -50,8 +50,9 @@ object HtmlChartImporter {
             val weekStart = parseDate(cells.first())
             val dayCellTotal = cells.size - 1
             val allowedDayCounts = when (market) {
-                // Kalyan archives vary: some publish Mon-Sat, others include Sunday.
-                Market.KALYAN -> setOf(6, 7)
+                // Legacy Time Bazar archives include Sunday; retain that historical
+                // column but classify its result outside the current market calendar.
+                Market.KALYAN, Market.TIME_BAZAR -> setOf(6, 7)
                 Market.MAIN_BAZAR -> setOf(5)
                 else -> setOf(market.activeDays.size)
             }
@@ -99,7 +100,9 @@ object HtmlChartImporter {
                             return@forEachIndexed
                         }
                         val result = "${digits.substring(0, 3)}-${digits.substring(3, 5)}-${digits.substring(5, 8)}"
-                        val status = validateResult(result, market, date, host, retrievedAt, sessionId)
+                        val status = if (date.dayOfWeek !in market.activeDays) {
+                            ObservationStatus.OUTSIDE_MARKET_CALENDAR
+                        } else validateResult(result, market, date, host, retrievedAt, sessionId)
                         observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, result.takeIf { status == ObservationStatus.PUBLISHED }, status)
                         if (status == ObservationStatus.MALFORMED) {
                             issues += "Week row ${index + 1}, day ${dayOffset + 1}: Panna/Jodi validation failed ($result)"
@@ -121,7 +124,9 @@ object HtmlChartImporter {
                         return@forEachIndexed
                     }
                     val result = "$open-$jodi-$close"
-                    val status = validateResult(result, market, date, host, retrievedAt, sessionId)
+                    val status = if (date.dayOfWeek !in market.activeDays) {
+                        ObservationStatus.OUTSIDE_MARKET_CALENDAR
+                    } else validateResult(result, market, date, host, retrievedAt, sessionId)
                     observations += observation(market, sessionId, date, host, pageUrl, retrievedAt, rawCell, result.takeIf { status == ObservationStatus.PUBLISHED }, status)
                     if (status == ObservationStatus.MALFORMED) {
                         issues += "Week row ${index + 1}, day ${dayOffset + 1}: Panna/Jodi validation failed ($result)"
