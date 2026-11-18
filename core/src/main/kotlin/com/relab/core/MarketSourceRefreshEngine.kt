@@ -35,11 +35,12 @@ data class MarketSourceRefreshReport(
 }
 
 /**
- * Bounded-parallel, source-isolated refresh coordinator.
+ * Bounded-parallel refresh coordinator.
  *
- * Fetching is injected so the core stays platform/network independent. A small
- * fixed pool overlaps network waits without creating unbounded connections.
- * Results retain source order and one failed publisher never blocks others.
+ * Exact duplicate URLs are fetched once per refresh batch, then parsed separately
+ * for each registered market/session so source provenance and calendar semantics
+ * remain attached to their own registration. Distinct URLs remain isolated and
+ * are fetched with a bounded worker pool.
  */
 object MarketSourceRefreshEngine {
     fun refresh(
@@ -48,23 +49,47 @@ object MarketSourceRefreshEngine {
         retrievedAt: () -> Instant = Instant::now
     ): MarketSourceRefreshReport {
         if (sources.isEmpty()) return MarketSourceRefreshReport(emptyList())
-        val executor = Executors.newFixedThreadPool(minOf(MAX_PARALLEL_SOURCES, sources.size))
-        val outcomes = try {
-            val tasks = sources.map { source -> Callable { refreshOne(source, fetch, retrievedAt) } }
-            executor.invokeAll(tasks).map { it.get() }
+
+        val groups = sources.withIndex().groupBy { it.value.url }
+        val executor = Executors.newFixedThreadPool(minOf(MAX_PARALLEL_SOURCES, groups.size))
+        val outcomesByIndex = arrayOfNulls<SourceRefreshOutcome>(sources.size)
+        try {
+            val tasks = groups.values.map { indexedSources ->
+                Callable {
+                    val representative = indexedSources.first().value
+                    val fetched = try {
+                        require(representative.enabled) { "Source is disabled pending identity verification." }
+                        Result.success(fetch(representative))
+                    } catch (error: Exception) {
+                        Result.failure(error)
+                    }
+                    indexedSources.forEach { indexed ->
+                        val source = indexed.value
+                        outcomesByIndex[indexed.index] = fetched.fold(
+                            onSuccess = { page -> refreshParsed(source, page, retrievedAt) },
+                            onFailure = { error ->
+                                SourceRefreshOutcome(source, emptyList(), 0, emptyList(),
+                                    error.message ?: error.javaClass.simpleName)
+                            }
+                        )
+                    }
+                }
+            }
+            executor.invokeAll(tasks).forEach { it.get() }
         } finally {
             executor.shutdown()
         }
-        return MarketSourceRefreshReport(outcomes)
+        return MarketSourceRefreshReport(outcomesByIndex.mapIndexed { index, outcome ->
+            outcome ?: SourceRefreshOutcome(sources[index], emptyList(), 0, emptyList(), "Refresh did not produce an outcome.")
+        })
     }
 
-    private fun refreshOne(
+    private fun refreshParsed(
         source: MarketSource,
-        fetch: (MarketSource) -> FetchedChartPage,
+        page: FetchedChartPage,
         retrievedAt: () -> Instant
     ): SourceRefreshOutcome = try {
         require(source.enabled) { "Source is disabled pending identity verification." }
-        val page = fetch(source)
         val uri = URI(page.finalUrl)
         require(uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() && uri.userInfo == null) {
             "Fetched source must resolve to an absolute HTTPS URL without embedded credentials."
