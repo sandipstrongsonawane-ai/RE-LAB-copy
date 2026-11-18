@@ -1108,9 +1108,10 @@ private fun MarketNextInsightCard(
     open: com.relab.core.CandidateRanking?, close: com.relab.core.CandidateRanking?,
     jodi: List<com.relab.core.JodiCandidate>, latestRetrievedAt: java.time.Instant?, latestResultDate: LocalDate?
 ) {
-    val features = records.mapNotNull { record ->
-        (com.relab.core.ChartMath.validate(record) as? com.relab.core.ValidationResult.Valid)?.features
+    val valid = records.mapNotNull { record ->
+        (com.relab.core.ChartMath.validate(record) as? com.relab.core.ValidationResult.Valid)?.let { record to it.features }
     }
+    val features = valid.map { it.second }
     fun top(values: List<String>, denominator: Int): String {
         if (values.isEmpty() || denominator == 0) return "Insufficient history"
         val (pattern, count) = values.groupingBy { it }.eachCount().entries
@@ -1127,7 +1128,7 @@ private fun MarketNextInsightCard(
     val halfOpen = top(features.map { "\${it.openPanna}-\${it.closeAnk}" }, features.size)
     val halfClose = top(features.map { "\${it.openAnk}-\${it.closePanna}" }, features.size)
     val fullSangam = top(features.map { "\${it.openPanna}-\${it.closePanna}" }, features.size)
-    val pannaTypes = features.flatMap { listOf(it.openPanna to it.openType, it.closePanna to it.closeType) }
+    val pannaTypes = valid.flatMap { listOf(it.first.openPanna to it.second.openType, it.first.closePanna to it.second.closeType) }
     val doublePannas = pannaTypes.filter { (_, type) -> type.name.contains("DOUBLE") || type.name == "DP" }.map { it.first }
     val triplePannas = pannaTypes.filter { (_, type) -> type.name.contains("TRIPLE") || type.name == "TP" }.map { it.first }
     val pannaDenominator = features.size * 2
