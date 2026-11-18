@@ -181,7 +181,7 @@ class WeeklyChartHtmlExtractorTest(unittest.TestCase):
         <td>********</td></tr></table>
         """
         rows, issues = extract_rows(
-            html, market="SRIDEVI", session_id="main", source_id="ratan567",
+            html, market="KALYAN", session_id="main", source_id="ratan567",
             retrieved_at="2026-11-18T12:00:00+05:30",
             source_url="https://ratan567official.com/kalyan/pana-chart/"
         )
