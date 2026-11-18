@@ -52,7 +52,7 @@ class SangamCandidateEngineTest {
     }
 
     private fun datedObservations(): List<SourceObservation> {
-        val results = listOf("277-65-249", "578-07-368", "800-81-137", "566-74-148", "288-82-679")
+        val results = listOf("277-65-249", "578-07-368", "800-81-137", "566-73-148", "288-82-679")
         return results.flatMapIndexed { index, result ->
             listOf("publisher-a", "publisher-b").map { source ->
                 SourceObservation(
@@ -94,15 +94,12 @@ class SangamCandidateEngineTest {
         assertTrue(exploratory.warning.contains("Exploratory"))
     }
 
-    @Test fun sangamWalkForwardRejectsDuplicateEligibleDatesAndInvalidWindows() {
+    @Test fun sangamWalkForwardDeduplicatesRepeatedSourceRowsAndRejectsInvalidWindows() {
         val rows = datedObservations()
         val duplicated = rows + rows.first()
-        try {
-            SangamWalkForwardEvaluator.evaluate(duplicated, Market.SRIDEVI, "main")
-            fail("Expected duplicate-date guard")
-        } catch (expected: IllegalArgumentException) {
-            assertTrue(expected.message!!.contains("Duplicate dates"))
-        }
+        val report = SangamWalkForwardEvaluator.evaluate(duplicated, Market.SRIDEVI, "main")
+        assertEquals("Repeated publisher rows must not create extra target dates", 5, report.totalTargetDates)
+        assertEquals(1, report.evaluatedDates)
         try {
             SangamWalkForwardEvaluator.evaluate(
                 rows, Market.SRIDEVI, "main",
