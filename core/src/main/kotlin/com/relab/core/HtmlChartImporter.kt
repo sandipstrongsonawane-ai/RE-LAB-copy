@@ -50,10 +50,10 @@ object HtmlChartImporter {
             val weekStart = parseDate(cells.first())
             val dayCellTotal = cells.size - 1
             val allowedDayCounts = when (market) {
-                Market.KALYAN -> setOf(6)
+                // Kalyan archives vary: some publish Mon-Sat, others include Sunday.
+                Market.KALYAN -> setOf(6, 7)
                 Market.MAIN_BAZAR -> setOf(5)
-                Market.TIME_BAZAR -> setOf(7)
-                Market.SRIDEVI, Market.SRIDEVI_NIGHT -> setOf(7)
+                else -> setOf(market.activeDays.size)
             }
             val rangeDates = rangePattern.findAll(cells.first()).mapNotNull { parseDate(it.value) }.toList()
             val threeCellDayCount = if (dayCellTotal % 3 == 0) dayCellTotal / 3 else -1
