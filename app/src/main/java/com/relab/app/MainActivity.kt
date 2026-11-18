@@ -738,16 +738,20 @@ private fun RelabHome(
                     RepeatedPublishedResultAuditCard(repeatedPublishedResults)
                 }
                 Text("Publisher-specific chart history", style = MaterialTheme.typography.titleLarge)
-                val sourceChartGroups = observations.groupBy { Triple(it.sourceId, it.market, it.sessionId) }
-                    .toList().sortedWith(compareBy({ it.first.second.name }, { it.first.third }, { it.first.first }))
+                // A separate chart/history is rendered for every URL. Publisher identity
+                // remains shared across that publisher's URLs for evidence counting.
+                val sourceChartGroups = observations.groupBy {
+                    Triple(it.sourceId, it.sourceUrl.orEmpty(), it.market to it.sessionId)
+                }.toList().sortedWith(compareBy({ it.first.third.first.name }, { it.first.third.second }, { it.first.first }, { it.first.second }))
                 if (sourceChartGroups.isEmpty()) {
-                    Text("Each registered publisher's chart history will appear here after supported rows are fetched.")
+                    Text("Each registered URL's own chart history will appear here after supported rows are fetched.")
                 } else {
                     sourceChartGroups.forEach { (identity, rows) ->
                         Card {
                             Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text("${identity.first} · ${identity.second.name}/${identity.third}", style = MaterialTheme.typography.titleSmall)
-                                Text("${rows.size} source rows · ${rows.map { it.date }.distinct().size} distinct dates · latest ${rows.maxOf { it.date }}", style = MaterialTheme.typography.bodySmall)
+                                Text("${identity.first} · ${identity.third.first.name}/${identity.third.second}", style = MaterialTheme.typography.titleSmall)
+                                Text("URL: ${identity.second}", style = MaterialTheme.typography.bodySmall)
+                                Text("${rows.size} rows · ${rows.map { it.date }.distinct().size} distinct dates · latest ${rows.maxOf { it.date }}", style = MaterialTheme.typography.bodySmall)
                                 rows.sortedByDescending { it.date }.take(12).forEach { row ->
                                     Text("${row.date}: ${row.normalizedResult ?: row.rawText} · ${row.status}", style = MaterialTheme.typography.bodySmall)
                                 }
