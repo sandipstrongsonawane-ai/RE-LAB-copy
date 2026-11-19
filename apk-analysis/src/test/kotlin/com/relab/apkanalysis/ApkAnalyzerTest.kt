@@ -35,7 +35,7 @@ class ApkAnalyzerTest {
         try {
             val report = ApkAnalyzer().analyze(apk)
             assertEquals("binary-android-xml", report.manifestFormat)
-            assertEquals("org.example.binary", report.packageName)
+            assertEquals("org.example.binary", report.packageName, "warnings=${report.warnings}; format=${report.manifestFormat}; permissions=${report.permissions}; components=${report.components}")
             assertEquals("9", report.versionCode)
             assertEquals("2.0", report.versionName)
             assertEquals(listOf("android.permission.CAMERA"), report.permissions)
