@@ -59,7 +59,7 @@ class ApkAnalyzerTest {
         val sp=java.io.ByteArrayOutputStream();i32(sp,strings.size);i32(sp,0);i32(sp,0x100);i32(sp,28+strings.size*4);i32(sp,0);offsets.forEach{i32(sp,it)};encoded.forEach{sp.write(it)}
         val pool=chunk(1,sp.toByteArray(),28)
         fun start(tag:String,attrs:List<Triple<String,String?,Pair<Int,Int>?>>):ByteArray{
-         val p=java.io.ByteArrayOutputStream();i32(p,1);i32(p,-1);i32(p,-1);i32(p,ix.getValue(tag));u16(p,20);u16(p,20);u16(p,attrs.size);u16(p,0);u16(p,0)
+         val p=java.io.ByteArrayOutputStream();i32(p,1);i32(p,-1);i32(p,-1);i32(p,ix.getValue(tag));u16(p,20);u16(p,20);u16(p,attrs.size);u16(p,0);u16(p,0);u16(p,0)
          attrs.forEach{(name,raw,typed)->i32(p,-1);i32(p,ix.getValue(name));i32(p,raw?.let(ix::getValue)?:-1);u16(p,8);p.write(0);p.write(typed?.first?:3);i32(p,typed?.second?:ix.getValue(raw!!))}
          return nodeChunk(0x0102,p.toByteArray())
         }
