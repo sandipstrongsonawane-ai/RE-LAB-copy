@@ -12,6 +12,7 @@ class ApkAnalyzerTest {
             "AndroidManifest.xml" to """<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.example.demo" android:versionCode="7" android:versionName="1.2"><uses-permission android:name="android.permission.CAMERA"/><application><activity android:name=".MainActivity" android:exported="true"/></application></manifest>""".toByteArray(),
             "classes.dex" to byteArrayOf(0x64,0x65,0x78,0x0a,0x30,0x33,0x35,0x00),
             "classes2.dex" to byteArrayOf(0x64,0x65,0x78,0x0a,0x30,0x33,0x39,0x00),
+            "classes10.dex" to byteArrayOf(0x64,0x65,0x78,0x0a,0x30,0x33,0x39,0x00),
             "lib/arm64-v8a/libsample.so" to byteArrayOf(1,2,3), "res/layout/main.xml" to byteArrayOf(1)
         ))
         try {
@@ -20,7 +21,7 @@ class ApkAnalyzerTest {
             assertEquals("7", report.versionCode); assertEquals("1.2", report.versionName)
             assertEquals(listOf("android.permission.CAMERA"), report.permissions)
             assertEquals("text-xml", report.manifestFormat)
-            assertEquals(2, report.dexFiles.size); assertEquals(listOf("035","039"), report.dexVersions)
+            assertEquals(3, report.dexFiles.size); assertEquals(listOf("035","039","039"), report.dexVersions)
             assertEquals(listOf("libsample.so"), report.nativeLibraries["arm64-v8a"])
             assertEquals(".MainActivity", report.components.single().name)
             assertEquals(1, report.resourceEntryCount)
