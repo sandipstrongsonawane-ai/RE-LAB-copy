@@ -9,7 +9,7 @@ import java.util.zip.ZipOutputStream
 class ApkAnalyzerTest {
     @Test fun inventoriesDexNativeResourcesAndTextManifest() {
         val apk = makeApk(mapOf(
-            "AndroidManifest.xml" to """<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.example.demo" android:versionCode="7" android:versionName="1.2"><uses-permission android:name="android.permission.CAMERA"/><application><activity android:name=".MainActivity" android:exported="true"/></application></manifest>""".toByteArray(),
+            "AndroidManifest.xml" to """<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.example.demo" android:versionCode="7" android:versionName="1.2"><uses-permission android:name="android.permission.CAMERA"/><uses-permission android:name="android.permission.RECORD_AUDIO"/><application><activity android:name=".MainActivity" android:exported="true"/></application></manifest>""".toByteArray(),
             "classes.dex" to byteArrayOf(0x64,0x65,0x78,0x0a,0x30,0x33,0x35,0x00),
             "classes2.dex" to byteArrayOf(0x64,0x65,0x78,0x0a,0x30,0x33,0x39,0x00),
             "classes10.dex" to byteArrayOf(0x64,0x65,0x78,0x0a,0x30,0x33,0x39,0x00),
@@ -25,6 +25,8 @@ class ApkAnalyzerTest {
             assertEquals(listOf("libsample.so"), report.nativeLibraries["arm64-v8a"])
             assertEquals(".MainActivity", report.components.single().name)
             assertEquals(1, report.resourceEntryCount)
+            assertTrue(report.securityFindings.any { it.title == "Sensitive permission declared" && it.evidence == "android.permission.CAMERA" })
+            assertTrue(report.securityFindings.any { it.title == "Exported component has no component-level permission" && it.evidence.contains(".MainActivity") })
         } finally { apk.delete() }
     }
 
@@ -35,6 +37,7 @@ class ApkAnalyzerTest {
             assertEquals("binary-android-xml", report.manifestFormat)
             assertNull(report.packageName)
             assertTrue(report.warnings.any { it.contains("not implemented") })
+            assertTrue(report.securityFindings.isEmpty())
         } finally { apk.delete() }
     }
 

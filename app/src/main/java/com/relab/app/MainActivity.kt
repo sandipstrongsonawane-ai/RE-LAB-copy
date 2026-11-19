@@ -1007,6 +1007,16 @@ private fun RelabHome(
                                 report.permissions.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
                                 Text("Components (${report.components.size})", style = MaterialTheme.typography.titleSmall)
                                 report.components.forEach { Text("• ${it.type}: ${it.name} · exported=${it.exported ?: "unspecified"}", style = MaterialTheme.typography.bodySmall) }
+                                Text("Security review · heuristic findings (${report.securityFindings.size})", style = MaterialTheme.typography.titleSmall)
+                                if (report.securityFindings.isEmpty()) {
+                                    Text("No heuristic findings from the metadata that could be decoded. This is not a security certification.", style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    report.securityFindings.forEach { finding ->
+                                        Text("[${finding.severity}] ${finding.title}", style = MaterialTheme.typography.bodyMedium)
+                                        Text("Evidence: ${finding.evidence}", style = MaterialTheme.typography.bodySmall)
+                                        Text(finding.explanation, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                                 Text("Analysis limits", style = MaterialTheme.typography.titleSmall)
                                 report.warnings.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
                             }
