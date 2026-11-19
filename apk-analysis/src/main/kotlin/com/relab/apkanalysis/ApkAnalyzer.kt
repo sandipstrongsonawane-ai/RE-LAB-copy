@@ -110,7 +110,7 @@ class ApkAnalyzer {
                         components += decoded.components
                         warnings += "Binary Android XML manifest decoded using the offline metadata parser."
                     } catch (error: Exception) {
-                        warnings += "Binary Android XML decode failed: ${error.javaClass.simpleName}"
+                        warnings += "Binary Android XML decode failed: ${error.javaClass.simpleName}: ${error.message ?: "no detail"}"
                     }
                 }
             }
