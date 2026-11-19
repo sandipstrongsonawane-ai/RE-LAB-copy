@@ -19,7 +19,7 @@ class ApkAnalyzerTest {
             val report = ApkAnalyzer().analyze(apk)
             assertEquals("org.example.demo", report.packageName)
             assertEquals("7", report.versionCode); assertEquals("1.2", report.versionName)
-            assertEquals(listOf("android.permission.CAMERA"), report.permissions)
+            assertEquals(listOf("android.permission.CAMERA", "android.permission.RECORD_AUDIO"), report.permissions)
             assertEquals("text-xml", report.manifestFormat)
             assertEquals(3, report.dexFiles.size); assertEquals(listOf("035","039","039"), report.dexVersions)
             assertEquals(listOf("libsample.so"), report.nativeLibraries["arm64-v8a"])
