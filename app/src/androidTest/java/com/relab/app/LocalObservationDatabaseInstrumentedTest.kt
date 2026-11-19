@@ -17,6 +17,7 @@ import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -314,7 +315,8 @@ class LocalObservationDatabaseInstrumentedTest {
             finalUrl = "https://publisher-a.example/sridevi-night?view=archive",
             retrievedAt = retrievedAt, html = "<html><body>raw night archive</body></html>"
         )
-        LocalObservationDatabase(context).use { db ->
+        val db = LocalObservationDatabase(context)
+        try {
             db.appendSourceSnapshots(listOf(snapshot))
             db.appendSourceSnapshots(listOf(snapshot))
             val restored = db.loadSourceSnapshots()
@@ -324,6 +326,8 @@ class LocalObservationDatabaseInstrumentedTest {
             assertEquals(snapshot.utf8Bytes, restored.single().utf8Bytes)
             db.clearDataset()
             assertTrue(db.loadSourceSnapshots().isEmpty())
+        } finally {
+            db.close()
         }
         context.deleteDatabase("relab_local_history.db")
     }
