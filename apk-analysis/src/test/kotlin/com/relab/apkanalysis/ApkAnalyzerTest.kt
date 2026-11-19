@@ -53,6 +53,7 @@ class ApkAnalyzerTest {
         fun u16(o:java.io.ByteArrayOutputStream,v:Int){o.write(v and 255);o.write(v ushr 8 and 255)}
         fun i32(o:java.io.ByteArrayOutputStream,v:Int){repeat(4){o.write(v ushr(it*8) and 255)}}
         fun chunk(type:Int,payload:ByteArray,header:Int=8):ByteArray{val o=java.io.ByteArrayOutputStream();u16(o,type);u16(o,header);i32(o,header+payload.size);o.write(payload);return o.toByteArray()}
+        fun nodeChunk(type:Int,payload:ByteArray):ByteArray{val o=java.io.ByteArrayOutputStream();u16(o,type);u16(o,16);i32(o,8+payload.size);o.write(payload);return o.toByteArray()}
         val encoded=strings.map{v->val bytes=v.toByteArray(Charsets.UTF_8);java.io.ByteArrayOutputStream().also{o->o.write(v.length);o.write(bytes.size);o.write(bytes);o.write(0)}.toByteArray()}
         var rel=0;val offsets=encoded.map{val x=rel;rel+=it.size;x}
         val sp=java.io.ByteArrayOutputStream();i32(sp,strings.size);i32(sp,0);i32(sp,0x100);i32(sp,28+strings.size*4);i32(sp,0);offsets.forEach{i32(sp,it)};encoded.forEach{sp.write(it)}
@@ -60,9 +61,9 @@ class ApkAnalyzerTest {
         fun start(tag:String,attrs:List<Triple<String,String?,Pair<Int,Int>?>>):ByteArray{
          val p=java.io.ByteArrayOutputStream();i32(p,1);i32(p,-1);i32(p,-1);i32(p,ix.getValue(tag));u16(p,20);u16(p,20);u16(p,attrs.size);u16(p,0);u16(p,0)
          attrs.forEach{(name,raw,typed)->i32(p,-1);i32(p,ix.getValue(name));i32(p,raw?.let(ix::getValue)?:-1);u16(p,8);p.write(0);p.write(typed?.first?:3);i32(p,typed?.second?:ix.getValue(raw!!))}
-         return chunk(0x0102,p.toByteArray(),16)
+         return nodeChunk(0x0102,p.toByteArray())
         }
-        fun end(tag:String):ByteArray{val p=java.io.ByteArrayOutputStream();i32(p,1);i32(p,-1);i32(p,-1);i32(p,ix.getValue(tag));return chunk(0x0103,p.toByteArray(),16)}
+        fun end(tag:String):ByteArray{val p=java.io.ByteArrayOutputStream();i32(p,1);i32(p,-1);i32(p,-1);i32(p,ix.getValue(tag));return nodeChunk(0x0103,p.toByteArray())}
         val body=java.io.ByteArrayOutputStream();body.write(pool)
         body.write(start("manifest",listOf(Triple("package","org.example.binary",null),Triple("versionCode",null,0x10 to 9),Triple("versionName","2.0",null))))
         body.write(start("uses-permission",listOf(Triple("name","android.permission.CAMERA",null))));body.write(end("uses-permission"))
