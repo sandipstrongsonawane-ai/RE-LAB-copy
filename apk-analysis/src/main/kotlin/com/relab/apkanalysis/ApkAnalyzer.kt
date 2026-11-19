@@ -101,7 +101,17 @@ class ApkAnalyzer {
                     }
                 } else {
                     format = "binary-android-xml"
-                    warnings += "Binary Android XML manifest detected; metadata decoding is not implemented yet."
+                    try {
+                        val decoded = BinaryAndroidManifestParser.parse(bytes)
+                        packageName = decoded.packageName
+                        versionCode = decoded.versionCode
+                        versionName = decoded.versionName
+                        permissions += decoded.permissions
+                        components += decoded.components
+                        warnings += "Binary Android XML manifest decoded using the offline metadata parser."
+                    } catch (error: Exception) {
+                        warnings += "Binary Android XML decode failed: ${error.javaClass.simpleName}"
+                    }
                 }
             }
             if (dex.isEmpty()) warnings += "No DEX bytecode files were found."
