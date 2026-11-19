@@ -53,7 +53,7 @@ class ApkAnalyzerTest {
         fun u16(o:java.io.ByteArrayOutputStream,v:Int){o.write(v and 255);o.write(v ushr 8 and 255)}
         fun i32(o:java.io.ByteArrayOutputStream,v:Int){repeat(4){o.write(v ushr(it*8) and 255)}}
         fun chunk(type:Int,payload:ByteArray,header:Int=8):ByteArray{val o=java.io.ByteArrayOutputStream();u16(o,type);u16(o,header);i32(o,header+payload.size);o.write(payload);return o.toByteArray()}
-        fun nodeChunk(type:Int,payload:ByteArray):ByteArray{val o=java.io.ByteArrayOutputStream();u16(o,type);u16(o,16);i32(o,16+payload.size);o.write(payload);return o.toByteArray()}
+        fun nodeChunk(type:Int,payload:ByteArray):ByteArray{val o=java.io.ByteArrayOutputStream();u16(o,type);u16(o,16);i32(o,8+payload.size);o.write(payload);return o.toByteArray()}
         val encoded=strings.map{v->val bytes=v.toByteArray(Charsets.UTF_8);java.io.ByteArrayOutputStream().also{o->o.write(v.length);o.write(bytes.size);o.write(bytes);o.write(0)}.toByteArray()}
         var rel=0;val offsets=encoded.map{val x=rel;rel+=it.size;x}
         val sp=java.io.ByteArrayOutputStream();i32(sp,strings.size);i32(sp,0);i32(sp,0x100);i32(sp,28+strings.size*4);i32(sp,0);offsets.forEach{i32(sp,it)};encoded.forEach{sp.write(it)}
